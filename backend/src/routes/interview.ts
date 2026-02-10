@@ -42,11 +42,11 @@ router.post('/create', [
     console.error('Validation errors:', JSON.stringify(errors.array(), null, 2));
     
     // Format errors for better readability
-    const formattedErrors = errors.array().map(err => ({
-      field: err.param || err.path,
-      message: err.msg,
+    const formattedErrors = errors.array().map((err: any) => ({
+      field: err.param || err.path || 'unknown',
+      message: err.msg || err.message || 'Validation error',
       value: err.value,
-      location: err.location,
+      location: err.location || 'body',
     }));
     
     console.error('Formatted errors:', formattedErrors);

@@ -45,7 +45,7 @@ const io = new Server(server, {
   },
 });
 
-const PORT = process.env.PORT || 5001; // Backend server port
+const PORT = parseInt(process.env.PORT || '5001', 10); // Backend server port
 
 // Check if port is available before starting
 const checkPort = (port: number): Promise<boolean> => {
@@ -134,14 +134,42 @@ app.use(morgan('combined', {
   },
 }));
 
-// Health check endpoint
+// Health check endpoint - Enhanced with detailed logging
 app.get('/health', (req, res) => {
-  res.status(200).json({
+  const healthCheck = {
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development',
-  });
+    port: PORT,
+    services: {
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      server: 'running',
+    },
+  };
+  
+  console.log('✅ Health check requested:', healthCheck);
+  res.status(200).json(healthCheck);
+});
+
+// API health check with more details
+app.get('/api/health', (req, res) => {
+  const healthCheck = {
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    port: PORT,
+    services: {
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      email: process.env.EMAIL_USER ? 'configured' : 'not configured',
+      stripe: process.env.STRIPE_SECRET_KEY ? 'configured' : 'not configured',
+      cloudinary: process.env.CLOUDINARY_CLOUD_NAME ? 'configured' : 'not configured',
+    },
+  };
+  
+  console.log('✅ API health check requested:', healthCheck);
+  res.status(200).json(healthCheck);
 });
 
 // Cloudinary health check endpoint
@@ -356,13 +384,57 @@ process.on('unhandledRejection', (reason, promise) => {
 // Start server
 const startServer = async () => {
   try {
+    console.log('=== STARTING BACKEND SERVER ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Node version:', process.version);
+    console.log('Environment:', process.env.NODE_ENV || 'development');
+    console.log('Port:', PORT);
+    console.log('MongoDB URI:', process.env.MONGODB_URI ? 'Configured' : 'NOT CONFIGURED');
+    
+    // Check if port is available
+    console.log(`Checking if port ${PORT} is available...`);
+    const isPortAvailable = await checkPort(PORT);
+    if (!isPortAvailable) {
+      console.error(`❌ Port ${PORT} is already in use!`);
+      console.error('Please kill the process using this port or use a different port.');
+      console.error(`To kill process on Windows: netstat -ano | findstr :${PORT}`);
+      console.error('Then: taskkill /PID <PID> /F');
+      process.exit(1);
+    }
+    console.log(`✅ Port ${PORT} is available`);
+    
+    console.log('Connecting to database...');
     await connectDB();
+    
+    console.log('Initializing services...');
     await initializeServices();
 
+    console.log(`Starting HTTP server on port ${PORT}...`);
     server.listen(PORT, () => {
+      console.log('=== SERVER STARTED SUCCESSFULLY ===');
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📡 API Base URL: http://localhost:${PORT}`);
+      console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
+      console.log(`📊 API Routes: http://localhost:${PORT}/api/*`);
+      console.log('=================================');
+      
       logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
     });
+    
+    server.on('error', (error: any) => {
+      console.error('=== SERVER ERROR ===');
+      console.error('Error:', error);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use!`);
+        console.error('Please kill the process or use a different port.');
+      }
+      process.exit(1);
+    });
+    
   } catch (error) {
+    console.error('=== FAILED TO START SERVER ===');
+    console.error('Error:', error);
     logger.error('Failed to start server:', error);
     process.exit(1);
   }
