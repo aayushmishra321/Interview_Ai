@@ -1,4 +1,4 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Download, Award, TrendingUp, Eye, Volume2, MessageCircle, Clock, CheckCircle, AlertCircle, Home, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -10,7 +10,9 @@ import toast from 'react-hot-toast';
 export function FeedbackPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const interviewId = searchParams.get('id');
+  const { id: paramId } = useParams();
+  // Support both path parameter (/feedback/:id) and query parameter (?id=)
+  const interviewId = paramId || searchParams.get('id');
 
   const [loading, setLoading] = useState(true);
   const [feedbackData, setFeedbackData] = useState<any>(null);

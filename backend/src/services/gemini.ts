@@ -95,8 +95,212 @@ class GeminiService {
     difficulty: string;
     count: number;
   }): any[] {
-    console.log('Generating fallback questions for:', params.role);
+    console.log('Generating fallback questions for:', params.role, params.interviewType);
     
+    // Special fallback for coding interviews
+    if (params.interviewType === 'coding') {
+      const codingQuestions = [
+        {
+          id: `q_${Date.now()}_1`,
+          text: "Two Sum",
+          description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.",
+          type: 'coding',
+          difficulty: params.difficulty,
+          expectedDuration: 15,
+          category: 'arrays',
+          examples: [
+            {
+              input: "nums = [2,7,11,15], target = 9",
+              output: "[0,1]",
+              explanation: "Because nums[0] + nums[1] == 9, we return [0, 1]."
+            },
+            {
+              input: "nums = [3,2,4], target = 6",
+              output: "[1,2]",
+              explanation: "Because nums[1] + nums[2] == 6, we return [1, 2]."
+            }
+          ],
+          constraints: [
+            "2 <= nums.length <= 10^4",
+            "-10^9 <= nums[i] <= 10^9",
+            "-10^9 <= target <= 10^9",
+            "Only one valid answer exists."
+          ],
+          testCases: [
+            { input: "[2,7,11,15]\n9", expectedOutput: "[0,1]" },
+            { input: "[3,2,4]\n6", expectedOutput: "[1,2]" },
+            { input: "[3,3]\n6", expectedOutput: "[0,1]" }
+          ],
+          followUpQuestions: [
+            "What is the time complexity of your solution?",
+            "Can you optimize the space complexity?",
+            "How would you handle duplicate numbers?"
+          ]
+        },
+        {
+          id: `q_${Date.now()}_2`,
+          text: "Reverse String",
+          description: "Write a function that reverses a string. The input string is given as an array of characters s. You must do this by modifying the input array in-place with O(1) extra memory.",
+          type: 'coding',
+          difficulty: params.difficulty,
+          expectedDuration: 10,
+          category: 'strings',
+          examples: [
+            {
+              input: 's = ["h","e","l","l","o"]',
+              output: '["o","l","l","e","h"]',
+              explanation: "The string is reversed in-place."
+            },
+            {
+              input: 's = ["H","a","n","n","a","h"]',
+              output: '["h","a","n","n","a","H"]',
+              explanation: "The string is reversed in-place."
+            }
+          ],
+          constraints: [
+            "1 <= s.length <= 10^5",
+            "s[i] is a printable ascii character."
+          ],
+          testCases: [
+            { input: '["h","e","l","l","o"]', expectedOutput: '["o","l","l","e","h"]' },
+            { input: '["H","a","n","n","a","h"]', expectedOutput: '["h","a","n","n","a","H"]' },
+            { input: '["a"]', expectedOutput: '["a"]' }
+          ],
+          followUpQuestions: [
+            "What is the time complexity?",
+            "Can you do it recursively?",
+            "How would you handle Unicode characters?"
+          ]
+        },
+        {
+          id: `q_${Date.now()}_3`,
+          text: "Valid Parentheses",
+          description: "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid. An input string is valid if: Open brackets must be closed by the same type of brackets. Open brackets must be closed in the correct order. Every close bracket has a corresponding open bracket of the same type.",
+          type: 'coding',
+          difficulty: params.difficulty,
+          expectedDuration: 15,
+          category: 'stacks',
+          examples: [
+            {
+              input: 's = "()"',
+              output: 'true',
+              explanation: "The string has valid parentheses."
+            },
+            {
+              input: 's = "()[]{}"',
+              output: 'true',
+              explanation: "All brackets are properly closed."
+            },
+            {
+              input: 's = "(]"',
+              output: 'false',
+              explanation: "Brackets are not properly matched."
+            }
+          ],
+          constraints: [
+            "1 <= s.length <= 10^4",
+            "s consists of parentheses only '()[]{}'."
+          ],
+          testCases: [
+            { input: '"()"', expectedOutput: 'true' },
+            { input: '"()[]{}"', expectedOutput: 'true' },
+            { input: '"(]"', expectedOutput: 'false' },
+            { input: '"([)]"', expectedOutput: 'false' },
+            { input: '"{[]}"', expectedOutput: 'true' }
+          ],
+          followUpQuestions: [
+            "What data structure did you use?",
+            "What is the space complexity?",
+            "How would you handle nested brackets?"
+          ]
+        },
+        {
+          id: `q_${Date.now()}_4`,
+          text: "Maximum Subarray",
+          description: "Given an integer array nums, find the subarray with the largest sum, and return its sum.",
+          type: 'coding',
+          difficulty: params.difficulty,
+          expectedDuration: 20,
+          category: 'dynamic-programming',
+          examples: [
+            {
+              input: 'nums = [-2,1,-3,4,-1,2,1,-5,4]',
+              output: '6',
+              explanation: "The subarray [4,-1,2,1] has the largest sum 6."
+            },
+            {
+              input: 'nums = [1]',
+              output: '1',
+              explanation: "The subarray [1] has the largest sum 1."
+            },
+            {
+              input: 'nums = [5,4,-1,7,8]',
+              output: '23',
+              explanation: "The subarray [5,4,-1,7,8] has the largest sum 23."
+            }
+          ],
+          constraints: [
+            "1 <= nums.length <= 10^5",
+            "-10^4 <= nums[i] <= 10^4"
+          ],
+          testCases: [
+            { input: '[-2,1,-3,4,-1,2,1,-5,4]', expectedOutput: '6' },
+            { input: '[1]', expectedOutput: '1' },
+            { input: '[5,4,-1,7,8]', expectedOutput: '23' }
+          ],
+          followUpQuestions: [
+            "Can you solve it using Kadane's algorithm?",
+            "What is the time complexity?",
+            "How would you find the actual subarray, not just the sum?"
+          ]
+        },
+        {
+          id: `q_${Date.now()}_5`,
+          text: "Merge Two Sorted Lists",
+          description: "You are given the heads of two sorted linked lists list1 and list2. Merge the two lists into one sorted list. The list should be made by splicing together the nodes of the first two lists. Return the head of the merged linked list.",
+          type: 'coding',
+          difficulty: params.difficulty,
+          expectedDuration: 20,
+          category: 'linked-lists',
+          examples: [
+            {
+              input: 'list1 = [1,2,4], list2 = [1,3,4]',
+              output: '[1,1,2,3,4,4]',
+              explanation: "The merged list is [1,1,2,3,4,4]."
+            },
+            {
+              input: 'list1 = [], list2 = []',
+              output: '[]',
+              explanation: "Both lists are empty."
+            },
+            {
+              input: 'list1 = [], list2 = [0]',
+              output: '[0]',
+              explanation: "One list is empty."
+            }
+          ],
+          constraints: [
+            "The number of nodes in both lists is in the range [0, 50].",
+            "-100 <= Node.val <= 100",
+            "Both list1 and list2 are sorted in non-decreasing order."
+          ],
+          testCases: [
+            { input: '[1,2,4]\n[1,3,4]', expectedOutput: '[1,1,2,3,4,4]' },
+            { input: '[]\n[]', expectedOutput: '[]' },
+            { input: '[]\n[0]', expectedOutput: '[0]' }
+          ],
+          followUpQuestions: [
+            "Can you do it recursively?",
+            "What is the space complexity?",
+            "How would you merge k sorted lists?"
+          ]
+        }
+      ];
+      
+      return codingQuestions.slice(0, params.count);
+    }
+    
+    // Regular behavioral/technical questions
     const fallbackQuestions = [
       {
         id: `q_${Date.now()}_1`,
@@ -470,6 +674,74 @@ Summary: ${params.resumeContext.summary}
 IMPORTANT: Generate questions that are SPECIFICALLY TAILORED to this candidate's background, skills, and experience. Ask about their specific projects, technologies they've used, and experiences mentioned in their resume.
 ` : '';
 
+    // Special handling for coding interviews
+    if (params.interviewType === 'coding') {
+      return `
+You are an expert coding interview question generator. Generate ${params.count} coding challenge questions for a ${params.role} position.
+
+Parameters:
+- Role: ${params.role}
+- Experience Level: ${params.experienceLevel}
+- Difficulty: ${params.difficulty}
+${resumeContext}
+
+Requirements for CODING questions:
+1. Each question must be a real algorithmic or data structure problem
+2. Include problem description, examples, constraints
+3. Provide 3-5 test cases with inputs and expected outputs
+4. Include hints for solving the problem
+5. Questions should vary in topics (arrays, strings, trees, graphs, dynamic programming, etc.)
+6. Difficulty should match the specified level
+${params.resumeContext ? '7. Consider the candidate\'s programming languages and experience' : ''}
+
+Return as JSON array with this EXACT structure:
+[
+  {
+    "id": "unique_id",
+    "text": "Problem Title",
+    "description": "Detailed problem description explaining what needs to be solved",
+    "type": "coding",
+    "difficulty": "${params.difficulty}",
+    "expectedDuration": 15,
+    "category": "arrays|strings|trees|graphs|dp|etc",
+    "examples": [
+      {
+        "input": "example input",
+        "output": "example output",
+        "explanation": "why this output"
+      }
+    ],
+    "constraints": [
+      "constraint 1",
+      "constraint 2"
+    ],
+    "testCases": [
+      {
+        "input": "test input 1",
+        "expectedOutput": "expected output 1"
+      },
+      {
+        "input": "test input 2",
+        "expectedOutput": "expected output 2"
+      },
+      {
+        "input": "test input 3",
+        "expectedOutput": "expected output 3"
+      }
+    ],
+    "followUpQuestions": [
+      "How would you optimize this?",
+      "What's the time complexity?",
+      "Can you handle edge cases?"
+    ]
+  }
+]
+
+Generate ${params.count} DIVERSE coding questions now. Make each question DIFFERENT from the others.
+`;
+    }
+
+    // Regular interview questions
     return `
 You are an expert technical interviewer. Generate ${params.count} interview questions for a ${params.role} position.
 

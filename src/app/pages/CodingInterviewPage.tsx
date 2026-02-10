@@ -1,104 +1,151 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
-import { Play, Lightbulb, Clock, CheckCircle, Code, Terminal, Loader2 } from 'lucide-react';
+import { Play, Lightbulb, Clock, CheckCircle, Code, Terminal, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { apiService } from '../services/api';
+import { useInterviewStore } from '../stores/interviewStore';
 import toast from 'react-hot-toast';
 
-const CODE_TEMPLATES = {
-  javascript: `function twoSum(nums, target) {
+const CODE_TEMPLATES: Record<string, string> = {
+  javascript: `function solution(input) {
   // Write your solution here
   
+  return result;
 }`,
-  python: `def two_sum(nums, target):
+  python: `def solution(input):
     # Write your solution here
-    pass`,
+    
+    return result`,
   java: `class Solution {
-    public int[] twoSum(int[] nums, int target) {
+    public Object solution(Object input) {
         // Write your solution here
         
+        return result;
     }
 }`,
   cpp: `class Solution {
 public:
-    vector<int> twoSum(vector<int>& nums, int target) {
+    auto solution(auto input) {
         // Write your solution here
         
+        return result;
     }
-};`
+};`,
+  typescript: `function solution(input: any): any {
+  // Write your solution here
+  
+  return result;
+}`,
+  c: `#include <stdio.h>
+
+int solution(int input) {
+    // Write your solution here
+    
+    return result;
+}`,
+  csharp: `using System;
+
+class Solution {
+    public object Solution(object input) {
+        // Write your solution here
+        
+        return result;
+    }
+}`,
 };
 
 export function CodingInterviewPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const interviewId = searchParams.get('id');
+  
+  const { currentInterview, currentQuestion, getNextQuestion, submitResponse, endInterview } = useInterviewStore();
+  
   const [language, setLanguage] = useState('javascript');
   const [code, setCode] = useState(CODE_TEMPLATES.javascript);
   const [output, setOutput] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [testsPassed, setTestsPassed] = useState(0);
+  const [totalTests, setTotalTests] = useState(0);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [questionIndex, setQuestionIndex] = useState(0);
+
+  // Timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeElapsed(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Load interview and first question
+  useEffect(() => {
+    if (!interviewId) {
+      toast.error('No interview ID provided');
+      navigate('/interview-setup');
+      return;
+    }
+
+    loadQuestion();
+  }, [interviewId]);
+
+  const loadQuestion = async () => {
+    setLoading(true);
+    try {
+      await getNextQuestion();
+      setLoading(false);
+    } catch (error) {
+      console.error('Failed to load question:', error);
+      toast.error('Failed to load question');
+      setLoading(false);
+    }
+  };
 
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
-    setCode(CODE_TEMPLATES[newLanguage as keyof typeof CODE_TEMPLATES]);
-  };
-
-  const problem = {
-    title: "Two Sum",
-    difficulty: "Easy",
-    description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice.",
-    examples: [
-      {
-        input: "nums = [2,7,11,15], target = 9",
-        output: "[0,1]",
-        explanation: "Because nums[0] + nums[1] == 9, we return [0, 1]."
-      },
-      {
-        input: "nums = [3,2,4], target = 6",
-        output: "[1,2]"
-      }
-    ],
-    constraints: [
-      "2 <= nums.length <= 10⁴",
-      "-10⁹ <= nums[i] <= 10⁹",
-      "-10⁹ <= target <= 10⁹",
-      "Only one valid answer exists."
-    ],
-    hints: [
-      "Use a hash map to store the numbers you've seen",
-      "For each number, check if target - number exists in the hash map",
-      "Time complexity should be O(n)"
-    ],
-    testCases: [
-      { input: '[2,7,11,15]\n9', expectedOutput: '[0,1]' },
-      { input: '[3,2,4]\n6', expectedOutput: '[1,2]' },
-      { input: '[3,3]\n6', expectedOutput: '[0,1]' },
-    ]
+    setCode(CODE_TEMPLATES[newLanguage as keyof typeof CODE_TEMPLATES] || CODE_TEMPLATES.javascript);
   };
 
   const handleRunCode = async () => {
+    if (!currentQuestion) {
+      toast.error('No question loaded');
+      return;
+    }
+
     setOutput('Running tests...\n');
     setIsExecuting(true);
     setExecutionTime(null);
 
     try {
+      // Parse test cases from question
+      const testCases = (currentQuestion as any).testCases || [
+        { input: 'test input', expectedOutput: 'test output' }
+      ];
+
       const response = await apiService.post('/api/code/execute-tests', {
         language,
         code,
-        testCases: problem.testCases || [
-          { input: '[2,7,11,15]\n9', expectedOutput: '[0,1]' },
-          { input: '[3,2,4]\n6', expectedOutput: '[1,2]' },
-          { input: '[3,3]\n6', expectedOutput: '[0,1]' },
-        ],
+        testCases,
       });
 
       if (response.success && response.data) {
         const { testResults, executionTime: execTime } = response.data;
         
         setExecutionTime(execTime);
+        setTotalTests(testResults.length);
         
         let outputText = '';
         let passed = 0;
@@ -146,8 +193,72 @@ export function CodingInterviewPage() {
     }
   };
 
-  const handleSubmit = () => {
-    navigate('/feedback/1');
+  const handleSubmit = async () => {
+    if (!currentQuestion || !interviewId) {
+      toast.error('Cannot submit: No question or interview ID');
+      return;
+    }
+
+    try {
+      // Submit the code solution
+      await submitResponse({
+        questionId: currentQuestion.id,
+        answer: code,
+        codeSubmission: {
+          language,
+          code,
+          testResults: [],
+        },
+        duration: timeElapsed,
+      });
+
+      toast.success('Solution submitted!');
+
+      // Check if there are more questions
+      const interview = currentInterview || await apiService.get(`/api/interview/${interviewId}`).then(r => r.data);
+      const totalQuestions = interview?.questions?.length || 0;
+      const answeredQuestions = interview?.responses?.length || 0;
+
+      if (answeredQuestions + 1 < totalQuestions) {
+        // Load next question
+        setQuestionIndex(prev => prev + 1);
+        setCode(CODE_TEMPLATES[language]);
+        setOutput('');
+        setTestsPassed(0);
+        setTotalTests(0);
+        await loadQuestion();
+      } else {
+        // End interview and go to feedback
+        await endInterview();
+        const finalInterviewId = (interview as any)?._id || interview?.id || interviewId;
+        navigate(`/feedback/${finalInterviewId}`);
+      }
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      toast.error('Failed to submit solution');
+    }
+  };
+
+  if (loading || !currentQuestion) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading coding challenge...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Parse question data
+  const problem = {
+    title: currentQuestion.text || 'Coding Challenge',
+    difficulty: currentQuestion.difficulty || 'Medium',
+    description: (currentQuestion as any).description || currentQuestion.text,
+    examples: (currentQuestion as any).examples || [],
+    constraints: (currentQuestion as any).constraints || [],
+    hints: currentQuestion.followUpQuestions || [],
+    testCases: (currentQuestion as any).testCases || [],
   };
 
   return (
@@ -158,15 +269,27 @@ export function CodingInterviewPage() {
           <div className="flex items-center gap-4">
             <div className="px-4 py-2 bg-secondary rounded-lg flex items-center gap-2">
               <Clock className="w-5 h-5 text-primary" />
-              <span>45:00</span>
+              <span>{formatTime(timeElapsed)}</span>
             </div>
-            <div className="px-4 py-2 bg-green-500/20 border-2 border-green-500 rounded-lg flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-              <span className="text-green-400">{testsPassed}/3 Tests Passed</span>
+            {totalTests > 0 && (
+              <div className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                testsPassed === totalTests 
+                  ? 'bg-green-500/20 border-2 border-green-500' 
+                  : 'bg-yellow-500/20 border-2 border-yellow-500'
+              }`}>
+                <CheckCircle className={`w-5 h-5 ${testsPassed === totalTests ? 'text-green-400' : 'text-yellow-400'}`} />
+                <span className={testsPassed === totalTests ? 'text-green-400' : 'text-yellow-400'}>
+                  {testsPassed}/{totalTests} Tests Passed
+                </span>
+              </div>
+            )}
+            <div className="px-4 py-2 bg-secondary rounded-lg">
+              <span className="text-muted-foreground">Question {questionIndex + 1}</span>
             </div>
           </div>
           <Button variant="gradient" onClick={handleSubmit} glow>
-            Submit Solution
+            Submit & Next
+            <ArrowRight className="ml-2 w-4 h-4" />
           </Button>
         </div>
 
@@ -177,8 +300,8 @@ export function CodingInterviewPage() {
               <div className="flex items-center justify-between mb-4">
                 <h1 className="text-2xl gradient-text">{problem.title}</h1>
                 <span className={`px-3 py-1 rounded-full text-sm ${
-                  problem.difficulty === 'Easy' ? 'bg-green-500/20 text-green-400' :
-                  problem.difficulty === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                  problem.difficulty === 'easy' || problem.difficulty === 'Easy' ? 'bg-green-500/20 text-green-400' :
+                  problem.difficulty === 'medium' || problem.difficulty === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
                   'bg-red-500/20 text-red-400'
                 }`}>
                   {problem.difficulty}
@@ -188,72 +311,78 @@ export function CodingInterviewPage() {
               <div className="space-y-4">
                 <div>
                   <h3 className="text-lg mb-2">Description</h3>
-                  <p className="text-muted-foreground">{problem.description}</p>
+                  <p className="text-muted-foreground whitespace-pre-wrap">{problem.description}</p>
                 </div>
 
-                <div>
-                  <h3 className="text-lg mb-2">Examples</h3>
-                  <div className="space-y-3">
-                    {problem.examples.map((example, index) => (
-                      <div key={index} className="bg-secondary rounded-lg p-4">
-                        <p className="text-sm mb-1">
-                          <span className="text-muted-foreground">Input:</span> {example.input}
-                        </p>
-                        <p className="text-sm mb-1">
-                          <span className="text-muted-foreground">Output:</span> {example.output}
-                        </p>
-                        {example.explanation && (
-                          <p className="text-sm text-muted-foreground mt-2">
-                            Explanation: {example.explanation}
+                {problem.examples && problem.examples.length > 0 && (
+                  <div>
+                    <h3 className="text-lg mb-2">Examples</h3>
+                    <div className="space-y-3">
+                      {problem.examples.map((example: any, index: number) => (
+                        <div key={index} className="bg-secondary rounded-lg p-4">
+                          <p className="text-sm mb-1">
+                            <span className="text-muted-foreground">Input:</span> {example.input}
                           </p>
-                        )}
-                      </div>
-                    ))}
+                          <p className="text-sm mb-1">
+                            <span className="text-muted-foreground">Output:</span> {example.output}
+                          </p>
+                          {example.explanation && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              Explanation: {example.explanation}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div>
-                  <h3 className="text-lg mb-2">Constraints</h3>
-                  <ul className="space-y-1">
-                    {problem.constraints.map((constraint, index) => (
-                      <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 shrink-0"></div>
-                        {constraint}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {problem.constraints && problem.constraints.length > 0 && (
+                  <div>
+                    <h3 className="text-lg mb-2">Constraints</h3>
+                    <ul className="space-y-1">
+                      {problem.constraints.map((constraint: string, index: number) => (
+                        <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <div className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 shrink-0"></div>
+                          {constraint}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </Card>
 
             {/* AI Hints */}
-            <Card>
-              <button
-                onClick={() => setShowHint(!showHint)}
-                className="flex items-center justify-between w-full"
-              >
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5 text-yellow-400" />
-                  <h3 className="text-lg">AI Hints</h3>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {showHint ? 'Hide' : 'Show'} hints
-                </span>
-              </button>
-              
-              {showHint && (
-                <div className="mt-4 space-y-2">
-                  {problem.hints.map((hint, index) => (
-                    <div key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-yellow-400 text-xs">{index + 1}</span>
+            {problem.hints && problem.hints.length > 0 && (
+              <Card>
+                <button
+                  onClick={() => setShowHint(!showHint)}
+                  className="flex items-center justify-between w-full"
+                >
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="w-5 h-5 text-yellow-400" />
+                    <h3 className="text-lg">AI Hints</h3>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {showHint ? 'Hide' : 'Show'} hints
+                  </span>
+                </button>
+                
+                {showHint && (
+                  <div className="mt-4 space-y-2">
+                    {problem.hints.map((hint: string, index: number) => (
+                      <div key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <div className="w-6 h-6 bg-yellow-500/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-yellow-400 text-xs">{index + 1}</span>
+                        </div>
+                        <p>{hint}</p>
                       </div>
-                      <p>{hint}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
           </div>
 
           {/* Right Panel - Code Editor */}
@@ -271,9 +400,12 @@ export function CodingInterviewPage() {
                     onChange={(e) => handleLanguageChange(e.target.value)}
                   >
                     <option value="javascript">JavaScript</option>
+                    <option value="typescript">TypeScript</option>
                     <option value="python">Python</option>
                     <option value="java">Java</option>
                     <option value="cpp">C++</option>
+                    <option value="c">C</option>
+                    <option value="csharp">C#</option>
                   </select>
                 </div>
               </div>
