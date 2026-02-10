@@ -100,10 +100,11 @@ class GeminiService {
     // Special fallback for coding interviews
     if (params.interviewType === 'coding') {
       const codingQuestions = [
+        // Easy - Arrays
         {
           id: `q_${Date.now()}_1`,
           text: "Two Sum",
-          description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target. You may assume that each input would have exactly one solution, and you may not use the same element twice. You can return the answer in any order.",
+          description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\n\nYou can return the answer in any order.",
           type: 'coding',
           difficulty: params.difficulty,
           expectedDuration: 15,
@@ -137,49 +138,51 @@ class GeminiService {
             "How would you handle duplicate numbers?"
           ]
         },
+        // Easy - Strings
         {
           id: `q_${Date.now()}_2`,
-          text: "Reverse String",
-          description: "Write a function that reverses a string. The input string is given as an array of characters s. You must do this by modifying the input array in-place with O(1) extra memory.",
+          text: "Valid Anagram",
+          description: "Given two strings s and t, return true if t is an anagram of s, and false otherwise.\n\nAn Anagram is a word or phrase formed by rearranging the letters of a different word or phrase, typically using all the original letters exactly once.",
           type: 'coding',
           difficulty: params.difficulty,
           expectedDuration: 10,
           category: 'strings',
           examples: [
             {
-              input: 's = ["h","e","l","l","o"]',
-              output: '["o","l","l","e","h"]',
-              explanation: "The string is reversed in-place."
+              input: 's = "anagram", t = "nagaram"',
+              output: 'true',
+              explanation: "Both strings contain the same characters with the same frequencies."
             },
             {
-              input: 's = ["H","a","n","n","a","h"]',
-              output: '["h","a","n","n","a","H"]',
-              explanation: "The string is reversed in-place."
+              input: 's = "rat", t = "car"',
+              output: 'false',
+              explanation: "The strings contain different characters."
             }
           ],
           constraints: [
-            "1 <= s.length <= 10^5",
-            "s[i] is a printable ascii character."
+            "1 <= s.length, t.length <= 5 * 10^4",
+            "s and t consist of lowercase English letters."
           ],
           testCases: [
-            { input: '["h","e","l","l","o"]', expectedOutput: '["o","l","l","e","h"]' },
-            { input: '["H","a","n","n","a","h"]', expectedOutput: '["h","a","n","n","a","H"]' },
-            { input: '["a"]', expectedOutput: '["a"]' }
+            { input: '"anagram"\n"nagaram"', expectedOutput: 'true' },
+            { input: '"rat"\n"car"', expectedOutput: 'false' },
+            { input: '"a"\n"ab"', expectedOutput: 'false' }
           ],
           followUpQuestions: [
-            "What is the time complexity?",
-            "Can you do it recursively?",
-            "How would you handle Unicode characters?"
+            "What if the inputs contain Unicode characters?",
+            "Can you solve it in O(n) time?",
+            "What data structure would you use?"
           ]
         },
+        // Medium - Stack
         {
           id: `q_${Date.now()}_3`,
           text: "Valid Parentheses",
-          description: "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid. An input string is valid if: Open brackets must be closed by the same type of brackets. Open brackets must be closed in the correct order. Every close bracket has a corresponding open bracket of the same type.",
+          description: "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.\n\nAn input string is valid if:\n1. Open brackets must be closed by the same type of brackets.\n2. Open brackets must be closed in the correct order.\n3. Every close bracket has a corresponding open bracket of the same type.",
           type: 'coding',
           difficulty: params.difficulty,
           expectedDuration: 15,
-          category: 'stacks',
+          category: 'stack',
           examples: [
             {
               input: 's = "()"',
@@ -214,10 +217,48 @@ class GeminiService {
             "How would you handle nested brackets?"
           ]
         },
+        // Medium - Arrays
         {
           id: `q_${Date.now()}_4`,
-          text: "Maximum Subarray",
-          description: "Given an integer array nums, find the subarray with the largest sum, and return its sum.",
+          text: "Product of Array Except Self",
+          description: "Given an integer array nums, return an array answer such that answer[i] is equal to the product of all the elements of nums except nums[i].\n\nThe product of any prefix or suffix of nums is guaranteed to fit in a 32-bit integer.\n\nYou must write an algorithm that runs in O(n) time and without using the division operation.",
+          type: 'coding',
+          difficulty: params.difficulty,
+          expectedDuration: 20,
+          category: 'arrays',
+          examples: [
+            {
+              input: 'nums = [1,2,3,4]',
+              output: '[24,12,8,6]',
+              explanation: "answer[0] = 2*3*4 = 24, answer[1] = 1*3*4 = 12, answer[2] = 1*2*4 = 8, answer[3] = 1*2*3 = 6"
+            },
+            {
+              input: 'nums = [-1,1,0,-3,3]',
+              output: '[0,0,9,0,0]',
+              explanation: "The product of all elements except the zero is 0."
+            }
+          ],
+          constraints: [
+            "2 <= nums.length <= 10^5",
+            "-30 <= nums[i] <= 30",
+            "The product of any prefix or suffix of nums is guaranteed to fit in a 32-bit integer."
+          ],
+          testCases: [
+            { input: '[1,2,3,4]', expectedOutput: '[24,12,8,6]' },
+            { input: '[-1,1,0,-3,3]', expectedOutput: '[0,0,9,0,0]' },
+            { input: '[1,2]', expectedOutput: '[2,1]' }
+          ],
+          followUpQuestions: [
+            "Can you solve it without using division?",
+            "What is the space complexity?",
+            "Can you do it in O(1) extra space?"
+          ]
+        },
+        // Medium - Dynamic Programming
+        {
+          id: `q_${Date.now()}_5`,
+          text: "Maximum Subarray (Kadane's Algorithm)",
+          description: "Given an integer array nums, find the subarray with the largest sum, and return its sum.\n\nA subarray is a contiguous non-empty sequence of elements within an array.",
           type: 'coding',
           difficulty: params.difficulty,
           expectedDuration: 20,
@@ -254,50 +295,209 @@ class GeminiService {
             "How would you find the actual subarray, not just the sum?"
           ]
         },
+        // Medium - Linked Lists
         {
-          id: `q_${Date.now()}_5`,
-          text: "Merge Two Sorted Lists",
-          description: "You are given the heads of two sorted linked lists list1 and list2. Merge the two lists into one sorted list. The list should be made by splicing together the nodes of the first two lists. Return the head of the merged linked list.",
+          id: `q_${Date.now()}_6`,
+          text: "Reverse Linked List",
+          description: "Given the head of a singly linked list, reverse the list, and return the reversed list.\n\nA linked list can be reversed either iteratively or recursively. Could you implement both?",
           type: 'coding',
           difficulty: params.difficulty,
-          expectedDuration: 20,
+          expectedDuration: 15,
           category: 'linked-lists',
           examples: [
             {
-              input: 'list1 = [1,2,4], list2 = [1,3,4]',
-              output: '[1,1,2,3,4,4]',
-              explanation: "The merged list is [1,1,2,3,4,4]."
+              input: 'head = [1,2,3,4,5]',
+              output: '[5,4,3,2,1]',
+              explanation: "The linked list is reversed."
             },
             {
-              input: 'list1 = [], list2 = []',
+              input: 'head = [1,2]',
+              output: '[2,1]',
+              explanation: "The linked list is reversed."
+            },
+            {
+              input: 'head = []',
               output: '[]',
-              explanation: "Both lists are empty."
-            },
-            {
-              input: 'list1 = [], list2 = [0]',
-              output: '[0]',
-              explanation: "One list is empty."
+              explanation: "Empty list remains empty."
             }
           ],
           constraints: [
-            "The number of nodes in both lists is in the range [0, 50].",
-            "-100 <= Node.val <= 100",
-            "Both list1 and list2 are sorted in non-decreasing order."
+            "The number of nodes in the list is the range [0, 5000].",
+            "-5000 <= Node.val <= 5000"
           ],
           testCases: [
-            { input: '[1,2,4]\n[1,3,4]', expectedOutput: '[1,1,2,3,4,4]' },
-            { input: '[]\n[]', expectedOutput: '[]' },
-            { input: '[]\n[0]', expectedOutput: '[0]' }
+            { input: '[1,2,3,4,5]', expectedOutput: '[5,4,3,2,1]' },
+            { input: '[1,2]', expectedOutput: '[2,1]' },
+            { input: '[]', expectedOutput: '[]' }
           ],
           followUpQuestions: [
             "Can you do it recursively?",
+            "What is the space complexity of each approach?",
+            "How would you reverse only part of the list?"
+          ]
+        },
+        // Medium - Binary Search
+        {
+          id: `q_${Date.now()}_7`,
+          text: "Search in Rotated Sorted Array",
+          description: "There is an integer array nums sorted in ascending order (with distinct values).\n\nPrior to being passed to your function, nums is possibly rotated at an unknown pivot index k (1 <= k < nums.length) such that the resulting array is [nums[k], nums[k+1], ..., nums[n-1], nums[0], nums[1], ..., nums[k-1]] (0-indexed).\n\nGiven the array nums after the possible rotation and an integer target, return the index of target if it is in nums, or -1 if it is not in nums.\n\nYou must write an algorithm with O(log n) runtime complexity.",
+          type: 'coding',
+          difficulty: params.difficulty,
+          expectedDuration: 25,
+          category: 'binary-search',
+          examples: [
+            {
+              input: 'nums = [4,5,6,7,0,1,2], target = 0',
+              output: '4',
+              explanation: "The target 0 is at index 4."
+            },
+            {
+              input: 'nums = [4,5,6,7,0,1,2], target = 3',
+              output: '-1',
+              explanation: "The target 3 is not in the array."
+            },
+            {
+              input: 'nums = [1], target = 0',
+              output: '-1',
+              explanation: "The target 0 is not in the array."
+            }
+          ],
+          constraints: [
+            "1 <= nums.length <= 5000",
+            "-10^4 <= nums[i] <= 10^4",
+            "All values of nums are unique.",
+            "nums is an ascending array that is possibly rotated.",
+            "-10^4 <= target <= 10^4"
+          ],
+          testCases: [
+            { input: '[4,5,6,7,0,1,2]\n0', expectedOutput: '4' },
+            { input: '[4,5,6,7,0,1,2]\n3', expectedOutput: '-1' },
+            { input: '[1]\n0', expectedOutput: '-1' }
+          ],
+          followUpQuestions: [
+            "How do you determine which half is sorted?",
+            "What is the time complexity?",
+            "Can you handle duplicates?"
+          ]
+        },
+        // Hard - Trees
+        {
+          id: `q_${Date.now()}_8`,
+          text: "Binary Tree Maximum Path Sum",
+          description: "A path in a binary tree is a sequence of nodes where each pair of adjacent nodes in the sequence has an edge connecting them. A node can only appear in the sequence at most once. Note that the path does not need to pass through the root.\n\nThe path sum of a path is the sum of the node's values in the path.\n\nGiven the root of a binary tree, return the maximum path sum of any non-empty path.",
+          type: 'coding',
+          difficulty: params.difficulty,
+          expectedDuration: 30,
+          category: 'trees',
+          examples: [
+            {
+              input: 'root = [1,2,3]',
+              output: '6',
+              explanation: "The optimal path is 2 -> 1 -> 3 with a path sum of 2 + 1 + 3 = 6."
+            },
+            {
+              input: 'root = [-10,9,20,null,null,15,7]',
+              output: '42',
+              explanation: "The optimal path is 15 -> 20 -> 7 with a path sum of 15 + 20 + 7 = 42."
+            }
+          ],
+          constraints: [
+            "The number of nodes in the tree is in the range [1, 3 * 10^4].",
+            "-1000 <= Node.val <= 1000"
+          ],
+          testCases: [
+            { input: '[1,2,3]', expectedOutput: '6' },
+            { input: '[-10,9,20,null,null,15,7]', expectedOutput: '42' },
+            { input: '[1]', expectedOutput: '1' }
+          ],
+          followUpQuestions: [
+            "How do you handle negative values?",
+            "What is the time complexity?",
+            "Can you explain your recursive approach?"
+          ]
+        },
+        // Hard - Dynamic Programming
+        {
+          id: `q_${Date.now()}_9`,
+          text: "Longest Increasing Subsequence",
+          description: "Given an integer array nums, return the length of the longest strictly increasing subsequence.\n\nA subsequence is an array that can be derived from another array by deleting some or no elements without changing the order of the remaining elements.",
+          type: 'coding',
+          difficulty: params.difficulty,
+          expectedDuration: 25,
+          category: 'dynamic-programming',
+          examples: [
+            {
+              input: 'nums = [10,9,2,5,3,7,101,18]',
+              output: '4',
+              explanation: "The longest increasing subsequence is [2,3,7,101], therefore the length is 4."
+            },
+            {
+              input: 'nums = [0,1,0,3,2,3]',
+              output: '4',
+              explanation: "The longest increasing subsequence is [0,1,2,3]."
+            },
+            {
+              input: 'nums = [7,7,7,7,7,7,7]',
+              output: '1',
+              explanation: "All elements are the same, so the longest increasing subsequence is just one element."
+            }
+          ],
+          constraints: [
+            "1 <= nums.length <= 2500",
+            "-10^4 <= nums[i] <= 10^4"
+          ],
+          testCases: [
+            { input: '[10,9,2,5,3,7,101,18]', expectedOutput: '4' },
+            { input: '[0,1,0,3,2,3]', expectedOutput: '4' },
+            { input: '[7,7,7,7,7,7,7]', expectedOutput: '1' }
+          ],
+          followUpQuestions: [
+            "Can you solve it in O(n log n) time?",
             "What is the space complexity?",
-            "How would you merge k sorted lists?"
+            "How would you find the actual subsequence?"
+          ]
+        },
+        // Medium - Two Pointers
+        {
+          id: `q_${Date.now()}_10`,
+          text: "Container With Most Water",
+          description: "You are given an integer array height of length n. There are n vertical lines drawn such that the two endpoints of the ith line are (i, 0) and (i, height[i]).\n\nFind two lines that together with the x-axis form a container, such that the container contains the most water.\n\nReturn the maximum amount of water a container can store.\n\nNotice that you may not slant the container.",
+          type: 'coding',
+          difficulty: params.difficulty,
+          expectedDuration: 20,
+          category: 'two-pointers',
+          examples: [
+            {
+              input: 'height = [1,8,6,2,5,4,8,3,7]',
+              output: '49',
+              explanation: "The vertical lines are at indices 1 and 8. The area is min(8,7) * (8-1) = 7 * 7 = 49."
+            },
+            {
+              input: 'height = [1,1]',
+              output: '1',
+              explanation: "The area is min(1,1) * (1-0) = 1."
+            }
+          ],
+          constraints: [
+            "n == height.length",
+            "2 <= n <= 10^5",
+            "0 <= height[i] <= 10^4"
+          ],
+          testCases: [
+            { input: '[1,8,6,2,5,4,8,3,7]', expectedOutput: '49' },
+            { input: '[1,1]', expectedOutput: '1' },
+            { input: '[4,3,2,1,4]', expectedOutput: '16' }
+          ],
+          followUpQuestions: [
+            "Why does the two-pointer approach work?",
+            "What is the time complexity?",
+            "Can you prove the correctness of your algorithm?"
           ]
         }
       ];
       
-      return codingQuestions.slice(0, params.count);
+      // Return appropriate number based on difficulty and count
+      return codingQuestions.slice(0, Math.min(params.count, codingQuestions.length));
     }
     
     // Regular behavioral/technical questions
@@ -677,7 +877,7 @@ IMPORTANT: Generate questions that are SPECIFICALLY TAILORED to this candidate's
     // Special handling for coding interviews
     if (params.interviewType === 'coding') {
       return `
-You are an expert coding interview question generator. Generate ${params.count} coding challenge questions for a ${params.role} position.
+You are an expert LeetCode-style coding interview question generator. Generate ${params.count} REAL algorithmic coding problems for a ${params.role} position.
 
 Parameters:
 - Role: ${params.role}
@@ -685,59 +885,82 @@ Parameters:
 - Difficulty: ${params.difficulty}
 ${resumeContext}
 
-Requirements for CODING questions:
-1. Each question must be a real algorithmic or data structure problem
-2. Include problem description, examples, constraints
-3. Provide 3-5 test cases with inputs and expected outputs
-4. Include hints for solving the problem
-5. Questions should vary in topics (arrays, strings, trees, graphs, dynamic programming, etc.)
-6. Difficulty should match the specified level
-${params.resumeContext ? '7. Consider the candidate\'s programming languages and experience' : ''}
+CRITICAL REQUIREMENTS for CODING questions:
+1. Each question MUST be a REAL algorithmic problem (like LeetCode, HackerRank, CodeForces)
+2. Include COMPLETE problem description with clear input/output format
+3. Provide 2-3 worked examples with explanations
+4. List all constraints (array size, value ranges, etc.)
+5. Provide 3-5 test cases with EXACT inputs and expected outputs
+6. Include hints for solving (algorithm approach, data structures)
+7. Questions should cover different topics:
+   - Arrays & Hashing
+   - Two Pointers
+   - Sliding Window
+   - Stack
+   - Binary Search
+   - Linked Lists
+   - Trees
+   - Graphs
+   - Dynamic Programming
+   - Greedy
+   - Backtracking
+8. Difficulty should match: ${params.difficulty}
+   - easy: Simple loops, basic data structures
+   - medium: Multiple data structures, some optimization
+   - hard: Complex algorithms, advanced optimization
+${params.resumeContext ? '9. Consider the candidate\'s programming languages from resume' : ''}
 
-Return as JSON array with this EXACT structure:
+EXAMPLE FORMAT (follow this EXACTLY):
 [
   {
-    "id": "unique_id",
-    "text": "Problem Title",
-    "description": "Detailed problem description explaining what needs to be solved",
+    "id": "q_coding_1",
+    "text": "Two Sum",
+    "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\\n\\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\\n\\nYou can return the answer in any order.",
     "type": "coding",
     "difficulty": "${params.difficulty}",
     "expectedDuration": 15,
-    "category": "arrays|strings|trees|graphs|dp|etc",
+    "category": "arrays",
     "examples": [
       {
-        "input": "example input",
-        "output": "example output",
-        "explanation": "why this output"
+        "input": "nums = [2,7,11,15], target = 9",
+        "output": "[0,1]",
+        "explanation": "Because nums[0] + nums[1] == 9, we return [0, 1]."
+      },
+      {
+        "input": "nums = [3,2,4], target = 6",
+        "output": "[1,2]",
+        "explanation": "Because nums[1] + nums[2] == 6, we return [1, 2]."
       }
     ],
     "constraints": [
-      "constraint 1",
-      "constraint 2"
+      "2 <= nums.length <= 10^4",
+      "-10^9 <= nums[i] <= 10^9",
+      "-10^9 <= target <= 10^9",
+      "Only one valid answer exists."
     ],
     "testCases": [
-      {
-        "input": "test input 1",
-        "expectedOutput": "expected output 1"
-      },
-      {
-        "input": "test input 2",
-        "expectedOutput": "expected output 2"
-      },
-      {
-        "input": "test input 3",
-        "expectedOutput": "expected output 3"
-      }
+      {"input": "[2,7,11,15]\\n9", "expectedOutput": "[0,1]"},
+      {"input": "[3,2,4]\\n6", "expectedOutput": "[1,2]"},
+      {"input": "[3,3]\\n6", "expectedOutput": "[0,1]"}
     ],
     "followUpQuestions": [
-      "How would you optimize this?",
-      "What's the time complexity?",
-      "Can you handle edge cases?"
+      "What is the time complexity of your solution?",
+      "Can you optimize the space complexity?",
+      "How would you handle duplicate numbers?"
     ]
   }
 ]
 
-Generate ${params.count} DIVERSE coding questions now. Make each question DIFFERENT from the others.
+Generate ${params.count} DIFFERENT LeetCode-style coding problems now. Each must be a REAL algorithmic challenge, NOT behavioral questions.
+Make sure each question has:
+- Clear problem statement
+- Input/output format
+- Examples with explanations
+- Constraints
+- Test cases
+- Hints
+
+DO NOT generate behavioral questions like "Tell me about your experience". ONLY generate algorithmic coding problems.
 `;
     }
 
