@@ -16,6 +16,7 @@ import { lazy, Suspense } from 'react';
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
 const ResumeAnalyzerPage = lazy(() => import('./pages/ResumeAnalyzerPage').then(m => ({ default: m.ResumeAnalyzerPage })));
 const InterviewSetupPage = lazy(() => import('./pages/InterviewSetupPage').then(m => ({ default: m.InterviewSetupPage })));
 const InterviewRoomPage = lazy(() => import('./pages/InterviewRoomPage').then(m => ({ default: m.InterviewRoomPage })));
@@ -128,6 +129,13 @@ function AppContent() {
           <ProtectedRoute>
             <Suspense fallback={<PageLoader />}>
               <ProfilePage />
+            </Suspense>
+          </ProtectedRoute>
+        } />
+        <Route path="/subscription" element={
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <SubscriptionPage />
             </Suspense>
           </ProtectedRoute>
         } />

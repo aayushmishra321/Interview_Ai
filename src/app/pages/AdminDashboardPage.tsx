@@ -85,14 +85,14 @@ export function AdminDashboardPage() {
           <p className="text-muted-foreground">Monitor platform performance and user activity</p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stats Grid - Responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat, index) => (
-            <Card key={index} glow>
+            <Card key={index} className="p-6">
               <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
                 <stat.icon className="w-6 h-6 text-white" />
               </div>
-              <p className="text-3xl gradient-text mb-1">{stat.value}</p>
+              <p className="text-2xl sm:text-3xl gradient-text mb-1">{stat.value}</p>
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
                 <span className={`text-sm ${
@@ -105,8 +105,8 @@ export function AdminDashboardPage() {
           ))}
         </div>
 
-        {/* Charts Row 1 */}
-        <div className="grid lg:grid-cols-2 gap-8">
+        {/* Charts Row 1 - Responsive */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           <Card>
             <div className="flex items-center gap-2 mb-6">
               <Users className="w-5 h-5 text-primary" />
@@ -170,7 +170,7 @@ export function AdminDashboardPage() {
             <Activity className="w-5 h-5 text-primary" />
             <h3 className="text-xl">AI Model Performance Metrics</h3>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 lg:gap-6">
             {aiPerformanceData.map((metric, index) => (
               <div key={index} className="text-center">
                 <div className="relative inline-block mb-3">
@@ -204,8 +204,8 @@ export function AdminDashboardPage() {
           </div>
         </Card>
 
-        {/* System Metrics & Recent Activity */}
-        <div className="grid lg:grid-cols-3 gap-8">
+        {/* System Metrics & Recent Activity - Responsive */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="lg:col-span-2">
             <Card>
               <div className="flex items-center gap-2 mb-6">
