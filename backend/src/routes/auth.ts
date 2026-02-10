@@ -12,6 +12,7 @@ import {
   passwordValidation 
 } from '../utils/validation';
 import logger from '../utils/logger';
+import emailService from '../services/email';
 
 const router = express.Router();
 
