@@ -22,7 +22,7 @@ class StripeService {
 
     try {
       this.stripe = new Stripe(stripeSecretKey, {
-        apiVersion: '2023-10-16',
+        apiVersion: '2026-01-28.clover' as any,
         typescript: true,
       });
       this.isConfigured = true;
@@ -227,7 +227,7 @@ class StripeService {
         user.subscription.stripeSubscriptionId = subscription.id;
         user.subscription.status = 'active';
         user.subscription.plan = this.getPlanFromPriceId(subscription.items.data[0].price.id);
-        user.subscription.expiresAt = new Date(subscription.current_period_end * 1000);
+        user.subscription.expiresAt = new Date((subscription as any).current_period_end * 1000);
         await user.save();
 
         logger.info(`Subscription created for user: ${user.email}`);
@@ -249,7 +249,7 @@ class StripeService {
       if (user) {
         user.subscription.status = subscription.status === 'active' ? 'active' : 'inactive';
         user.subscription.plan = this.getPlanFromPriceId(subscription.items.data[0].price.id);
-        user.subscription.expiresAt = new Date(subscription.current_period_end * 1000);
+        user.subscription.expiresAt = new Date((subscription as any).current_period_end * 1000);
         await user.save();
 
         logger.info(`Subscription updated for user: ${user.email}`);
