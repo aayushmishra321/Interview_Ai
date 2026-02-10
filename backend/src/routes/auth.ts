@@ -63,6 +63,15 @@ router.post('/register', registrationValidation(), async (req, res): Promise<voi
     user.auth.lastLogin = new Date();
     await user.save();
 
+    // Send welcome email
+    try {
+      await emailService.sendWelcomeEmail(user.email, user.profile.firstName);
+      logger.info(`Welcome email sent to: ${email}`);
+    } catch (emailError) {
+      logger.error(`Failed to send welcome email to ${email}:`, emailError);
+      // Don't fail registration if email fails
+    }
+
     logger.info(`New user registered: ${email}`);
 
     res.status(201).json({

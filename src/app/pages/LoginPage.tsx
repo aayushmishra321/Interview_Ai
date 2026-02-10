@@ -92,7 +92,7 @@ export function LoginPage() {
 
           <Button 
             type="submit" 
-            variant="primary" 
+            variant="default" 
             className="w-full"
             disabled={isLoading}
           >
@@ -107,6 +107,15 @@ export function LoginPage() {
             Sign up for free
           </Link>
         </p>
+
+        <div className="mt-4 pt-4 border-t border-border">
+          <p className="text-center text-sm text-muted-foreground">
+            Are you an administrator?{' '}
+            <Link to="/admin/login" className="text-primary hover:underline font-medium">
+              Admin Login
+            </Link>
+          </p>
+        </div>
       </Card>
     </div>
   );
