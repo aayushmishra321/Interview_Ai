@@ -101,13 +101,33 @@ export function InterviewSetupPage() {
       console.log('Interview created successfully!');
       toast.success('Interview created successfully!');
 
-      // Navigate based on type
+      // Get the created interview from the store
+      const createdInterview = useInterviewStore.getState().currentInterview;
+      
+      if (!createdInterview) {
+        console.error('No interview found after creation');
+        toast.error('Interview created but data is missing');
+        return;
+      }
+
+      // MongoDB returns _id, but we need to handle both _id and id
+      const interviewId = (createdInterview as any)._id || createdInterview.id;
+      
+      if (!interviewId) {
+        console.error('No interview ID found. Interview object:', createdInterview);
+        toast.error('Interview created but ID is missing');
+        return;
+      }
+
+      console.log('Created interview ID:', interviewId);
+
+      // Navigate based on type with interview ID
       if (selectedType === 'coding') {
-        console.log('Navigating to coding interview...');
-        navigate('/coding-interview');
+        console.log('Navigating to coding interview with ID:', interviewId);
+        navigate(`/coding-interview?id=${interviewId}`);
       } else {
-        console.log('Navigating to interview room...');
-        navigate('/interview-room');
+        console.log('Navigating to interview room with ID:', interviewId);
+        navigate(`/interview-room?id=${interviewId}`);
       }
     } catch (error: any) {
       console.error('=== INTERVIEW CREATION ERROR ===');

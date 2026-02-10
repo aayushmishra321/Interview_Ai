@@ -127,11 +127,47 @@ class APIService {
     params?: any
   ): Promise<PaginatedResponse<T>> {
     try {
-      const response: AxiosResponse<PaginatedResponse<T>> = await this.api.get(url, {
+      console.log('=== getPaginated called ===');
+      console.log('URL:', url);
+      console.log('Params:', { page, limit, ...params });
+      
+      // Backend returns { success: true, data: [...], pagination: {...} }
+      // We need to extract data and pagination from the response
+      const response: AxiosResponse<any> = await this.api.get(url, {
         params: { page, limit, ...params },
       });
+      
+      console.log('getPaginated raw axios response status:', response.status);
+      console.log('getPaginated raw response.data:', response.data);
+      console.log('response.data type:', typeof response.data);
+      console.log('response.data keys:', Object.keys(response.data));
+      console.log('response.data.success:', response.data.success);
+      console.log('response.data.data type:', typeof response.data.data);
+      console.log('response.data.data is array:', Array.isArray(response.data.data));
+      console.log('response.data.data length:', response.data.data?.length);
+      
+      // Handle backend response format with success field
+      if (response.data && response.data.success !== undefined) {
+        const result = {
+          data: response.data.data || [],
+          pagination: response.data.pagination || {
+            page: 1,
+            limit: 10,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+        console.log('Returning formatted result:', result);
+        console.log('Result data length:', result.data.length);
+        return result;
+      }
+      
+      // Fallback to direct response if no success field
+      console.log('No success field, returning direct response');
       return response.data;
     } catch (error: any) {
+      console.error('getPaginated error:', error);
+      console.error('Error response:', error.response?.data);
       throw error;
     }
   }

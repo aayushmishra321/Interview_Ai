@@ -22,6 +22,7 @@ const InterviewSetupPage = lazy(() => import('./pages/InterviewSetupPage').then(
 const InterviewRoomPage = lazy(() => import('./pages/InterviewRoomPage').then(m => ({ default: m.InterviewRoomPage })));
 const CodingInterviewPage = lazy(() => import('./pages/CodingInterviewPage').then(m => ({ default: m.CodingInterviewPage })));
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage').then(m => ({ default: m.FeedbackPage })));
+const HistoryPage = lazy(() => import('./pages/HistoryPage').then(m => ({ default: m.HistoryPage })));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
 const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
 
@@ -143,6 +144,13 @@ function AppContent() {
           <ProtectedRoute>
             <Suspense fallback={<PageLoader />}>
               <ResumeAnalyzerPage />
+            </Suspense>
+          </ProtectedRoute>
+        } />
+        <Route path="/history" element={
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <HistoryPage />
             </Suspense>
           </ProtectedRoute>
         } />

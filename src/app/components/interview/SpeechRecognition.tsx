@@ -163,16 +163,50 @@ export function SpeechRecognition({
   };
 
   const cleanup = () => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
+    console.log('=== CLEANING UP SPEECH RECOGNITION ===');
     
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-    }
-    
-    if (microphoneRef.current) {
-      microphoneRef.current.disconnect();
+    try {
+      // Cancel animation frame
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+      
+      // Disconnect microphone source
+      if (microphoneRef.current) {
+        try {
+          microphoneRef.current.disconnect();
+          microphoneRef.current = null;
+        } catch (err) {
+          console.error('Error disconnecting microphone:', err);
+        }
+      }
+      
+      // Close AudioContext with safeguard
+      if (audioContextRef.current) {
+        const state = audioContextRef.current.state;
+        console.log('AudioContext state:', state);
+        
+        if (state !== 'closed') {
+          console.log('Closing AudioContext...');
+          audioContextRef.current.close()
+            .then(() => {
+              console.log('✅ AudioContext closed successfully');
+              audioContextRef.current = null;
+            })
+            .catch((err) => {
+              console.error('Error closing AudioContext:', err);
+              audioContextRef.current = null;
+            });
+        } else {
+          console.log('AudioContext already closed');
+          audioContextRef.current = null;
+        }
+      }
+      
+      console.log('✅ Speech recognition cleanup complete');
+    } catch (err) {
+      console.error('Error during speech recognition cleanup:', err);
     }
   };
 

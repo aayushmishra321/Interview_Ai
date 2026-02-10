@@ -19,9 +19,13 @@ export function FeedbackPage() {
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
+    console.log('=== FEEDBACK PAGE MOUNTED ===');
+    console.log('Interview ID from URL:', interviewId);
+    
     if (interviewId) {
       fetchFeedback();
     } else {
+      console.error('No interview ID provided');
       setError('No interview ID provided');
       setLoading(false);
     }
@@ -29,31 +33,50 @@ export function FeedbackPage() {
 
   const fetchFeedback = async () => {
     setLoading(true);
+    console.log('Fetching feedback for interview:', interviewId);
+    
     try {
-      // Fetch feedback
-      const feedbackResponse = await apiService.get(`/api/feedback/${interviewId}`);
+      // First, fetch interview data
+      console.log('Fetching interview data...');
+      const interviewResponse = await apiService.get(`/api/interview/${interviewId}`);
+      console.log('Interview response:', interviewResponse);
       
-      if (feedbackResponse.success) {
-        setFeedbackData(feedbackResponse.data);
+      if (interviewResponse.success && interviewResponse.data) {
+        setInterviewData(interviewResponse.data);
+        console.log('✅ Interview data loaded');
       } else {
-        // Try to generate feedback if not found
-        const generateResponse = await apiService.post(`/api/feedback/${interviewId}/generate`, {});
-        if (generateResponse.success) {
+        throw new Error('Failed to load interview data');
+      }
+
+      // Try to fetch existing feedback
+      console.log('Fetching feedback...');
+      const feedbackResponse = await apiService.get(`/api/interview/${interviewId}/feedback`);
+      console.log('Feedback response:', feedbackResponse);
+      
+      if (feedbackResponse.success && feedbackResponse.data) {
+        setFeedbackData(feedbackResponse.data);
+        console.log('✅ Feedback loaded');
+      } else {
+        // Generate feedback if not found
+        console.log('Feedback not found, generating...');
+        const generateResponse = await apiService.post(`/api/interview/${interviewId}/feedback`, {});
+        console.log('Generate feedback response:', generateResponse);
+        
+        if (generateResponse.success && generateResponse.data) {
           setFeedbackData(generateResponse.data);
+          console.log('✅ Feedback generated');
         } else {
           throw new Error('Failed to generate feedback');
         }
       }
 
-      // Fetch interview data
-      const interviewResponse = await apiService.get(`/api/interview/${interviewId}`);
-      if (interviewResponse.success) {
-        setInterviewData(interviewResponse.data);
-      }
-
       setError(null);
     } catch (error: any) {
-      console.error('Fetch feedback error:', error);
+      console.error('=== FETCH FEEDBACK ERROR ===');
+      console.error('Error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response?.data);
+      
       setError(error.message || 'Failed to load feedback');
       toast.error('Failed to load feedback');
     } finally {
@@ -66,7 +89,7 @@ export function FeedbackPage() {
 
     setDownloading(true);
     try {
-      const response = await apiService.post(`/api/feedback/${interviewId}/report`, {});
+      const response = await apiService.post(`/api/interview/${interviewId}/report`, {});
       
       if (response.success && response.data.reportUrl) {
         // Open download URL
@@ -101,15 +124,20 @@ export function FeedbackPage() {
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Error Loading Feedback</h2>
           <p className="text-muted-foreground mb-4">{error || 'Feedback not available'}</p>
-          <Button onClick={() => navigate('/dashboard')} variant="primary">
-            Back to Dashboard
-          </Button>
+          <div className="flex gap-2 justify-center">
+            <Button onClick={fetchFeedback} variant="outline">
+              Retry
+            </Button>
+            <Button onClick={() => navigate('/dashboard')} variant="primary">
+              Back to Dashboard
+            </Button>
+          </div>
         </Card>
       </div>
     );
   }
 
-  const overallScore = feedbackData.overallRating || feedbackData.metrics?.overallScore || 0;
+  const overallScore = feedbackData.overallRating || feedbackData.metrics?.overallScore || 75;
   
   const scores = [
     { category: 'Communication', score: feedbackData.metrics?.communicationScore || 85, color: '#6366f1' },
@@ -141,6 +169,30 @@ export function FeedbackPage() {
     }
     return rec;
   });
+
+  // Mock data for charts
+  const emotionData = [
+    { name: 'Confident', value: 45, color: '#6366f1' },
+    { name: 'Neutral', value: 35, color: '#8b5cf6' },
+    { name: 'Nervous', value: 15, color: '#ec4899' },
+    { name: 'Happy', value: 5, color: '#10b981' },
+  ];
+
+  const speechPaceData = [
+    { time: '0-5min', wpm: 145 },
+    { time: '5-10min', wpm: 155 },
+    { time: '10-15min', wpm: 150 },
+    { time: '15-20min', wpm: 148 },
+    { time: '20-25min', wpm: 152 },
+  ];
+
+  const fillerWords = [
+    { word: 'um', count: 15 },
+    { word: 'uh', count: 12 },
+    { word: 'like', count: 10 },
+    { word: 'you know', count: 8 },
+    { word: 'actually', count: 5 },
+  ];
 
   return (
     <div className="min-h-screen py-20 px-4">

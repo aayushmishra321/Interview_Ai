@@ -71,7 +71,21 @@ export function InterviewRoomPage() {
 
   // Initialize interview
   useEffect(() => {
+    console.log('=== INTERVIEW ROOM INITIALIZATION ===');
+    console.log('Interview ID from URL:', interviewId);
+    console.log('Current Interview:', currentInterview);
+    console.log('Current Session:', currentSession);
+    
+    if (!interviewId) {
+      console.error('No interview ID in URL');
+      toast.error('No interview ID provided. Redirecting to setup...');
+      navigate('/interview-setup');
+      return;
+    }
+
+    // If we have an interview ID but no session, start the interview
     if (interviewId && !currentSession) {
+      console.log('Starting interview with ID:', interviewId);
       handleStartInterview();
     }
   }, [interviewId]);
@@ -115,7 +129,9 @@ export function InterviewRoomPage() {
       
       // Navigate to feedback page
       if (currentInterview) {
-        navigate(`/feedback?id=${currentInterview.id}`);
+        // Handle both _id and id
+        const interviewId = (currentInterview as any)._id || currentInterview.id;
+        navigate(`/feedback?id=${interviewId}`);
       } else {
         navigate('/dashboard');
       }

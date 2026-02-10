@@ -14,26 +14,43 @@ export const DashboardPage = memo(function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const response = await apiService.get('/api/user/stats');
-        
-        if (response.success) {
-          setStats(response.data);
-        } else {
-          setError(response.error || 'Failed to load dashboard data');
-        }
-      } catch (err: any) {
-        console.error('Dashboard data fetch error:', err);
-        setError(err.message || 'Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    console.log('=== DASHBOARD MOUNTED ===');
     fetchDashboardData();
+    
+    // Set up polling for real-time updates every 30 seconds
+    const interval = setInterval(() => {
+      console.log('Refreshing dashboard data...');
+      fetchDashboardData();
+    }, 30000);
+    
+    // Cleanup on unmount
+    return () => {
+      console.log('Dashboard unmounting, clearing interval');
+      clearInterval(interval);
+    };
   }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching dashboard data...');
+      
+      const response = await apiService.get('/api/user/stats');
+      console.log('Dashboard data response:', response);
+      
+      if (response.success) {
+        setStats(response.data);
+        console.log('✅ Dashboard data loaded');
+      } else {
+        setError(response.error || 'Failed to load dashboard data');
+      }
+    } catch (err: any) {
+      console.error('Dashboard data fetch error:', err);
+      setError(err.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Memoize skill data from stats or use defaults
   const skillData = useMemo(() => {

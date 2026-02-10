@@ -18,7 +18,7 @@ export function Header() {
   const navItems = isLoggedIn ? [
     { name: 'Dashboard', path: '/dashboard' },
     { name: 'Resume', path: '/resume' },
-    { name: 'History', path: '/dashboard' },
+    { name: 'History', path: '/history' },
   ] : [
     { name: 'Features', path: '#features' },
     { name: 'How it Works', path: '#how-it-works' },
