@@ -11,23 +11,52 @@ const router = express.Router();
 
 // Create new interview
 router.post('/create', [
-  body('type').isIn(['behavioral', 'technical', 'coding', 'system-design']),
-  body('settings.role').notEmpty().trim(),
-  body('settings.difficulty').isIn(['easy', 'medium', 'hard']),
-  body('settings.duration').isInt({ min: 15, max: 120 }),
+  body('type')
+    .isIn(['behavioral', 'technical', 'coding', 'system-design'])
+    .withMessage('Interview type must be one of: behavioral, technical, coding, system-design'),
+  body('settings.role')
+    .notEmpty()
+    .withMessage('Target role is required')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Role must be between 2 and 100 characters'),
+  body('settings.difficulty')
+    .isIn(['easy', 'medium', 'hard'])
+    .withMessage('Difficulty must be one of: easy, medium, hard'),
+  body('settings.duration')
+    .isInt({ min: 15, max: 120 })
+    .withMessage('Duration must be between 15 and 120 minutes'),
 ], asyncHandler(async (req, res) => {
-  console.log('POST /api/interview/create - Request received');
+  console.log('=== POST /api/interview/create ===');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('User:', req.user);
   console.log('Request body:', JSON.stringify(req.body, null, 2));
-  console.log('User from token:', req.user);
+  console.log('Request headers:', {
+    'content-type': req.headers['content-type'],
+    'authorization': req.headers.authorization ? 'Bearer ***' : 'none',
+  });
   
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.error('Validation errors:', errors.array());
+    console.error('=== VALIDATION FAILED ===');
+    console.error('Validation errors:', JSON.stringify(errors.array(), null, 2));
+    
+    // Format errors for better readability
+    const formattedErrors = errors.array().map(err => ({
+      field: err.param || err.path,
+      message: err.msg,
+      value: err.value,
+      location: err.location,
+    }));
+    
+    console.error('Formatted errors:', formattedErrors);
+    
     return res.status(400).json({
       success: false,
       error: 'Validation failed',
-      details: errors.array(),
       message: 'Please check your interview settings and try again',
+      details: formattedErrors,
+      hint: 'Check that type is one of: behavioral, technical, coding, system-design',
     });
   }
 
@@ -41,6 +70,11 @@ router.post('/create', [
   }
 
   const { type, settings, resumeId } = req.body;
+  
+  console.log('Validated data:');
+  console.log('  Type:', type);
+  console.log('  Settings:', settings);
+  console.log('  Resume ID:', resumeId || 'none');
 
   try {
     console.log(`Creating ${type} interview for user ${req.user.userId}`);
@@ -95,6 +129,7 @@ router.post('/create', [
     }
 
     logger.info(`Generating ${questionParams.count} questions for ${settings.role} with resume context: ${!!resumeData}`);
+    console.log('Question generation params:', JSON.stringify(questionParams, null, 2));
 
     // Generate questions using Gemini AI
     const questions = await geminiService.generateInterviewQuestions(questionParams);
@@ -134,7 +169,11 @@ router.post('/create', [
     await interview.save();
 
     logger.info(`Interview created: ${interview._id} for user ${req.user.userId} with ${questions.length} questions`);
-    console.log(`Interview created successfully: ${interview._id}`);
+    console.log(`=== Interview created successfully ===`);
+    console.log(`Interview ID: ${interview._id}`);
+    console.log(`Questions: ${questions.length}`);
+    console.log(`Type: ${type}`);
+    console.log(`Role: ${settings.role}`);
 
     res.status(201).json({
       success: true,
@@ -143,11 +182,16 @@ router.post('/create', [
     });
   } catch (error: any) {
     logger.error('Interview creation error:', error);
-    console.error('Interview creation error:', error);
+    console.error('=== INTERVIEW CREATION ERROR ===');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
     res.status(500).json({
       success: false,
       error: 'Interview creation failed',
       message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 }));

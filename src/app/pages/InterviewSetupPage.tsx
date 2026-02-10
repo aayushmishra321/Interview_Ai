@@ -46,53 +46,91 @@ export function InterviewSetupPage() {
       color: 'bg-pink-500'
     },
     {
-      id: 'hr',
-      name: 'HR Round',
+      id: 'system-design',
+      name: 'System Design',
       icon: Users,
-      description: 'Culture fit, career goals, and company expectations',
-      duration: '20-30 min',
-      difficulty: 'Easy',
+      description: 'Architecture design, scalability, and system components',
+      duration: '45-60 min',
+      difficulty: 'Hard',
       color: 'bg-orange-500'
     }
   ];
 
   const handleStart = async () => {
+    console.log('=== INTERVIEW CREATION DEBUG ===');
+    console.log('Selected Type:', selectedType);
+    console.log('Selected Role:', selectedRole);
+    console.log('Selected Difficulty:', selectedDifficulty);
+    console.log('Duration:', duration);
+    
     if (!selectedType) {
+      console.error('Validation failed: No interview type selected');
       toast.error('Please select an interview type');
       return;
     }
 
     if (!selectedRole) {
+      console.error('Validation failed: No role entered');
       toast.error('Please enter your target role');
       return;
     }
 
-    try {
-      // Create interview
-      await createInterview({
-        type: selectedType as 'behavioral' | 'technical' | 'coding' | 'system-design',
-        settings: {
-          role: selectedRole,
-          difficulty: selectedDifficulty,
-          duration,
-          includeVideo: true,
-          includeAudio: true,
-          includeCoding: selectedType === 'coding',
-        },
-      });
+    // Prepare payload
+    const payload = {
+      type: selectedType as 'behavioral' | 'technical' | 'coding' | 'system-design',
+      settings: {
+        role: selectedRole,
+        difficulty: selectedDifficulty,
+        duration,
+        includeVideo: true,
+        includeAudio: true,
+        includeCoding: selectedType === 'coding',
+      },
+    };
+    
+    console.log('Payload to be sent:', JSON.stringify(payload, null, 2));
+    console.log('Payload type check:', typeof payload.type, payload.type);
+    console.log('Settings check:', payload.settings);
 
+    try {
+      console.log('Calling createInterview...');
+      
+      // Create interview
+      await createInterview(payload);
+
+      console.log('Interview created successfully!');
       toast.success('Interview created successfully!');
 
       // Navigate based on type
       if (selectedType === 'coding') {
+        console.log('Navigating to coding interview...');
         navigate('/coding-interview');
       } else {
-        // Get the created interview ID from store and navigate
+        console.log('Navigating to interview room...');
         navigate('/interview-room');
       }
     } catch (error: any) {
-      console.error('Failed to create interview:', error);
-      toast.error('Failed to create interview');
+      console.error('=== INTERVIEW CREATION ERROR ===');
+      console.error('Error object:', error);
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      // Show detailed error to user
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Failed to create interview';
+      
+      toast.error(errorMessage);
+      
+      // Log validation details if available
+      if (error.response?.data?.details) {
+        console.error('Validation errors:', error.response.data.details);
+        error.response.data.details.forEach((detail: any) => {
+          console.error(`  - ${detail.msg || detail.message} (field: ${detail.param || detail.path})`);
+        });
+      }
     }
   };
 
