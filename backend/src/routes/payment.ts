@@ -1,0 +1,417 @@
+import express from 'express';
+import { authenticateToken } from '../middleware/auth';
+import { asyncHandler } from '../middleware/errorHandler';
+import stripeService from '../services/stripe';
+import User from '../models/User';
+import logger from '../utils/logger';
+
+const router = express.Router();
+
+/**
+ * Create Stripe checkout session
+ * POST /api/payment/create-checkout-session
+ */
+router.post('/create-checkout-session', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+  const { priceId, plan } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+    });
+  }
+
+  if (!priceId || !plan) {
+    return res.status(400).json({
+      success: false,
+      error: 'Price ID and plan are required',
+    });
+  }
+
+  if (!stripeService.isReady()) {
+    return res.status(503).json({
+      success: false,
+      error: 'Payment service not configured',
+      message: 'Stripe is not configured. Please contact support.',
+    });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    // Create or get Stripe customer
+    let customerId = user.subscription.stripeCustomerId;
+    
+    if (!customerId) {
+      const customer = await stripeService.createCustomer({
+        email: user.email,
+        name: `${user.profile.firstName} ${user.profile.lastName}`,
+        metadata: {
+          userId: user._id.toString(),
+        },
+      });
+
+      if (!customer) {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to create customer',
+        });
+      }
+
+      customerId = customer.id;
+      user.subscription.stripeCustomerId = customerId;
+      await user.save();
+    }
+
+    // Create checkout session
+    const session = await stripeService.createCheckoutSession({
+      customerId,
+      priceId,
+      successUrl: `${process.env.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${process.env.FRONTEND_URL}/payment/cancel`,
+      metadata: {
+        userId: user._id.toString(),
+        plan,
+      },
+    });
+
+    if (!session) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create checkout session',
+      });
+    }
+
+    logger.info(`Checkout session created for user: ${user.email}, plan: ${plan}`);
+
+    res.json({
+      success: true,
+      data: {
+        sessionId: session.id,
+        url: session.url,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Create checkout session error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create checkout session',
+      message: error.message,
+    });
+  }
+}));
+
+/**
+ * Create billing portal session
+ * POST /api/payment/create-portal-session
+ */
+router.post('/create-portal-session', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+    });
+  }
+
+  if (!stripeService.isReady()) {
+    return res.status(503).json({
+      success: false,
+      error: 'Payment service not configured',
+    });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    const customerId = user.subscription.stripeCustomerId;
+    if (!customerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'No active subscription',
+      });
+    }
+
+    const session = await stripeService.createBillingPortalSession({
+      customerId,
+      returnUrl: `${process.env.FRONTEND_URL}/profile`,
+    });
+
+    if (!session) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create portal session',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        url: session.url,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Create portal session error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create portal session',
+      message: error.message,
+    });
+  }
+}));
+
+/**
+ * Get subscription status
+ * GET /api/payment/subscription
+ */
+router.get('/subscription', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+    });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    const subscription = user.subscription;
+    let stripeSubscription = null;
+
+    if (subscription.stripeSubscriptionId && stripeService.isReady()) {
+      stripeSubscription = await stripeService.getSubscription(subscription.stripeSubscriptionId);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        plan: subscription.plan,
+        status: subscription.status,
+        expiresAt: subscription.expiresAt,
+        stripeSubscriptionId: subscription.stripeSubscriptionId,
+        stripeCustomerId: subscription.stripeCustomerId,
+        stripeDetails: stripeSubscription ? {
+          currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
+          cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+        } : null,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Get subscription error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get subscription',
+      message: error.message,
+    });
+  }
+}));
+
+/**
+ * Cancel subscription
+ * POST /api/payment/cancel-subscription
+ */
+router.post('/cancel-subscription', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+    });
+  }
+
+  if (!stripeService.isReady()) {
+    return res.status(503).json({
+      success: false,
+      error: 'Payment service not configured',
+    });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    const subscriptionId = user.subscription.stripeSubscriptionId;
+    if (!subscriptionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'No active subscription',
+      });
+    }
+
+    const canceledSubscription = await stripeService.cancelSubscription(subscriptionId);
+    if (!canceledSubscription) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to cancel subscription',
+      });
+    }
+
+    logger.info(`Subscription cancelled for user: ${user.email}`);
+
+    // Type assertion for Stripe subscription with current_period_end
+    const subscription = canceledSubscription as any;
+    
+    res.json({
+      success: true,
+      message: 'Subscription cancelled successfully',
+      data: {
+        canceledAt: new Date(),
+        endsAt: subscription.current_period_end ? new Date(subscription.current_period_end * 1000) : new Date(),
+      },
+    });
+  } catch (error: any) {
+    logger.error('Cancel subscription error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to cancel subscription',
+      message: error.message,
+    });
+  }
+}));
+
+/**
+ * Stripe webhook handler
+ * POST /api/payment/webhook
+ */
+router.post('/webhook', express.raw({ type: 'application/json' }), asyncHandler(async (req, res) => {
+  const signature = req.headers['stripe-signature'] as string;
+
+  if (!signature) {
+    return res.status(400).json({
+      success: false,
+      error: 'Missing stripe-signature header',
+    });
+  }
+
+  if (!stripeService.isReady()) {
+    return res.status(503).json({
+      success: false,
+      error: 'Payment service not configured',
+    });
+  }
+
+  try {
+    const result = await stripeService.handleWebhook(req.body, signature);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+      });
+    }
+
+    res.json({
+      success: true,
+      received: true,
+    });
+  } catch (error: any) {
+    logger.error('Webhook error:', error);
+    res.status(400).json({
+      success: false,
+      error: 'Webhook error',
+      message: error.message,
+    });
+  }
+}));
+
+/**
+ * Get pricing plans
+ * GET /api/payment/plans
+ */
+router.get('/plans', asyncHandler(async (req, res) => {
+  const plans = [
+    {
+      id: 'free',
+      name: 'Free',
+      price: 0,
+      interval: 'month',
+      features: [
+        '5 interviews per month',
+        'Basic feedback',
+        'Resume analysis',
+        'Email support',
+      ],
+      priceId: null,
+    },
+    {
+      id: 'pro',
+      name: 'Pro',
+      price: 29,
+      interval: 'month',
+      features: [
+        'Unlimited interviews',
+        'Advanced AI feedback',
+        'Video analysis',
+        'Code execution',
+        'Priority support',
+        'Interview history',
+      ],
+      priceId: process.env.STRIPE_PRO_PRICE_ID,
+    },
+    {
+      id: 'enterprise',
+      name: 'Enterprise',
+      price: 99,
+      interval: 'month',
+      features: [
+        'Everything in Pro',
+        'Custom interview templates',
+        'Team management',
+        'API access',
+        'Dedicated support',
+        'Custom integrations',
+      ],
+      priceId: process.env.STRIPE_ENTERPRISE_PRICE_ID,
+    },
+  ];
+
+  res.json({
+    success: true,
+    data: plans,
+  });
+}));
+
+/**
+ * Payment health check
+ * GET /api/payment/health
+ */
+router.get('/health', asyncHandler(async (req, res) => {
+  const isReady = stripeService.isReady();
+
+  res.json({
+    success: true,
+    status: isReady ? 'operational' : 'not_configured',
+    message: isReady ? 'Payment service is operational' : 'Stripe not configured',
+    timestamp: new Date().toISOString(),
+  });
+}));
+
+export default router;
