@@ -26,6 +26,8 @@ import paymentRoutes from './routes/payment';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { authenticateToken } from './middleware/auth';
+import { apiLimiter, authLimiter, passwordResetLimiter, uploadLimiter } from './middleware/rateLimiter';
+import { sanitizeData, xssProtection, validateInput } from './middleware/sanitizer';
 
 // Import services
 import { initializeRedis } from './services/redis';
@@ -114,6 +116,11 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Security middleware - Sanitization
+app.use(sanitizeData); // MongoDB injection protection
+app.use(xssProtection); // XSS protection
+app.use(validateInput); // Input validation
+
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
 
@@ -158,15 +165,15 @@ app.get('/api/health/cloudinary', async (req, res) => {
   }
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/user', authenticateToken, userRoutes);
-app.use('/api/resume', authenticateToken, resumeRoutes);
-app.use('/api/interview', authenticateToken, interviewRoutes);
-app.use('/api/feedback', authenticateToken, feedbackRoutes);
-app.use('/api/admin', authenticateToken, adminRoutes);
-app.use('/api/code', codeExecutionRoutes);
-app.use('/api/payment', paymentRoutes);
+// API routes with specific rate limiters
+app.use('/api/auth', authLimiter, authRoutes); // Strict rate limiting for auth
+app.use('/api/user', apiLimiter, authenticateToken, userRoutes);
+app.use('/api/resume', uploadLimiter, authenticateToken, resumeRoutes); // Upload rate limiting
+app.use('/api/interview', apiLimiter, authenticateToken, interviewRoutes);
+app.use('/api/feedback', apiLimiter, authenticateToken, feedbackRoutes);
+app.use('/api/admin', apiLimiter, authenticateToken, adminRoutes);
+app.use('/api/code', apiLimiter, codeExecutionRoutes);
+app.use('/api/payment', apiLimiter, paymentRoutes);
 
 // Error handling middleware
 app.use(notFound);
