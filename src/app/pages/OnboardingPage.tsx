@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Code, Database, Layers, BarChart3, Upload, CheckCircle, ChevronRight } from 'lucide-react';
-import { Button } from '@/app/components/Button';
-import { Card } from '@/app/components/Card';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 
 export function OnboardingPage() {
   const navigate = useNavigate();

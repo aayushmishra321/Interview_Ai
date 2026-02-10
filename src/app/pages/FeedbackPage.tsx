@@ -1,8 +1,8 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Download, Award, TrendingUp, Eye, Volume2, MessageCircle, Clock, CheckCircle, AlertCircle, Home, Loader2 } from 'lucide-react';
-import { Button } from '@/app/components/Button';
-import { Card } from '@/app/components/Card';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { apiService } from '../services/api';
 import toast from 'react-hot-toast';

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Brain, ArrowLeft, Loader2 } from 'lucide-react';
-import { Button } from '@/app/components/Button';
-import { Input } from '@/app/components/Input';
-import { Card } from '@/app/components/Card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card } from '../components/ui/card';
 import { apiService } from '../services/api';
 import toast from 'react-hot-toast';
 

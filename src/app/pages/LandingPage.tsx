@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Brain, Video, MessageSquare, TrendingUp, Upload, PlayCircle, Award, ChevronRight, Check, Star } from 'lucide-react';
-import { Button } from '@/app/components/Button';
-import { Card } from '@/app/components/Card';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 
 export function LandingPage() {
   return (

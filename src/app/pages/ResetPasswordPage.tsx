@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Brain, CheckCircle, Loader2 } from 'lucide-react';
-import { Button } from '@/app/components/Button';
-import { Input } from '@/app/components/Input';
-import { Card } from '@/app/components/Card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Card } from '../components/ui/card';
 import { apiService } from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -234,7 +234,7 @@ export function ResetPasswordPage() {
 
           <Button 
             type="submit" 
-            variant="primary" 
+            variant="default" 
             className="w-full"
             disabled={loading || !token}
           >

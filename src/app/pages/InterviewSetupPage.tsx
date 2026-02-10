@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Video, Code, MessageSquare, Users, ChevronRight, Loader2 } from 'lucide-react';
-import { Button } from '@/app/components/Button';
-import { Card } from '@/app/components/Card';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 import { useInterviewStore } from '../stores/interviewStore';
 import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';

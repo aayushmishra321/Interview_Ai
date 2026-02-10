@@ -1,5 +1,5 @@
 import { Users, Video, TrendingUp, AlertTriangle, Activity, Award } from 'lucide-react';
-import { Card } from '@/app/components/Card';
+import { Card } from '../components/ui/card';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 export function AdminDashboardPage() {

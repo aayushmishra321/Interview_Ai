@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import { Play, Lightbulb, Clock, CheckCircle, Code, Terminal, Loader2 } from 'lucide-react';
-import { Button } from '@/app/components/Button';
-import { Card } from '@/app/components/Card';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 import { apiService } from '../services/api';
 import toast from 'react-hot-toast';
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, MapPin, Briefcase, Save, ArrowLeft, Upload } from 'lucide-react';
-import { Button } from '@/app/components/Button';
-import { Card } from '@/app/components/Card';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 import { useAuthStore } from '../stores/authStore';
 import { apiService } from '../services/api';
 import toast from 'react-hot-toast';
@@ -388,7 +388,7 @@ export function ProfilePage() {
             </Button>
             <Button
               type="submit"
-              variant="primary"
+              variant="default"
               disabled={loading}
             >
               {loading ? (

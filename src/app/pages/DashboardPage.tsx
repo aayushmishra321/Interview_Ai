@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Play, FileText, TrendingUp, Award, Clock, Target, Brain, Code } from 'lucide-react';
-import { Button } from '@/app/components/Button';
-import { Card } from '@/app/components/Card';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { memo, useMemo, useEffect, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
@@ -125,7 +125,7 @@ export const DashboardPage = memo(function DashboardPage() {
       <div className="min-h-screen py-20 px-4 bg-gray-50 flex items-center justify-center">
         <Card className="max-w-md w-full p-6 text-center">
           <p className="text-red-500 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()} variant="primary">
+          <Button onClick={() => window.location.reload()} variant="default">
             Retry
           </Button>
         </Card>
@@ -143,7 +143,7 @@ export const DashboardPage = memo(function DashboardPage() {
             <p className="text-muted-foreground">Ready to practice your next interview?</p>
           </div>
           <Link to="/interview-setup">
-            <Button variant="primary" size="lg">
+            <Button variant="default" size="lg">
               <Play className="mr-2 w-5 h-5" />
               Start New Interview
             </Button>
@@ -153,7 +153,7 @@ export const DashboardPage = memo(function DashboardPage() {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statsData.map((stat, index) => (
-            <Card key={index} className="text-center" hover>
+            <Card key={index} className="text-center hover:shadow-lg transition-shadow">
               <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mx-auto mb-3`}>
                 <stat.icon className="w-6 h-6 text-white" />
               </div>
@@ -255,7 +255,7 @@ export const DashboardPage = memo(function DashboardPage() {
                   <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
                   <p className="text-muted-foreground mb-4">No interviews yet</p>
                   <Link to="/interview-setup">
-                    <Button variant="primary">
+                    <Button variant="default">
                       <Play className="mr-2 w-4 h-4" />
                       Start Your First Interview
                     </Button>
@@ -267,7 +267,7 @@ export const DashboardPage = memo(function DashboardPage() {
             {/* Quick Actions */}
             <div className="grid md:grid-cols-2 gap-4">
               <Link to="/interview-setup">
-                <Card className="cursor-pointer" hover>
+                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                   <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-4">
                     <Play className="w-6 h-6 text-white" />
                   </div>
@@ -276,7 +276,7 @@ export const DashboardPage = memo(function DashboardPage() {
                 </Card>
               </Link>
               <Link to="/coding-interview">
-                <Card className="cursor-pointer" hover>
+                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
                   <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-4">
                     <Code className="w-6 h-6 text-white" />
                   </div>
