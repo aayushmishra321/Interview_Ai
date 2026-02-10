@@ -69,27 +69,51 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
   peerConnection: null,
 
   createInterview: async (setup: InterviewSetupForm) => {
+    console.log('Creating interview with setup:', setup);
     set({ isLoading: true, error: null });
     
     try {
+      // Validate setup before sending
+      if (!setup.type) {
+        throw new Error('Interview type is required');
+      }
+      if (!setup.settings?.role) {
+        throw new Error('Target role is required');
+      }
+      if (!setup.settings?.difficulty) {
+        throw new Error('Difficulty level is required');
+      }
+      if (!setup.settings?.duration) {
+        throw new Error('Duration is required');
+      }
+      
+      console.log('Sending interview creation request...');
       const response = await interviewService.createInterview(setup);
+      console.log('Interview creation response:', response);
       
       if (response.success && response.data) {
+        console.log('Interview created successfully:', response.data);
         set({
           currentInterview: response.data,
           isLoading: false,
         });
       } else {
+        const errorMsg = response.error || response.message || 'Failed to create interview';
+        console.error('Interview creation failed:', errorMsg, response.details);
         set({
-          error: response.error || 'Failed to create interview',
+          error: errorMsg,
           isLoading: false,
         });
+        throw new Error(errorMsg);
       }
     } catch (error: any) {
+      console.error('Interview creation error:', error);
+      const errorMsg = error.message || 'Failed to create interview';
       set({
-        error: error.message || 'Failed to create interview',
+        error: errorMsg,
         isLoading: false,
       });
+      throw error;
     }
   },
 

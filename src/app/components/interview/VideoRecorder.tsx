@@ -38,14 +38,32 @@ export function VideoRecorder({
 
   const initializeMedia = async () => {
     try {
+      setError(null);
+      
       // Check if mediaDevices is available
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         console.warn('Media devices not supported in this browser');
         setIsInitialized(true);
-        setError('Camera not available');
+        setError('Camera not available in this browser. Please use Chrome, Firefox, or Edge.');
         return;
       }
 
+      // Check for existing permissions first
+      try {
+        const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        console.log('Camera permission status:', permissions.state);
+        
+        if (permissions.state === 'denied') {
+          setIsInitialized(true);
+          setError('Camera permission denied. Please allow camera access in your browser settings.');
+          return;
+        }
+      } catch (permError) {
+        console.log('Permission API not available, proceeding with getUserMedia');
+      }
+
+      console.log('Requesting camera and microphone access...');
+      
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280 },
@@ -60,18 +78,24 @@ export function VideoRecorder({
         },
       });
 
+      console.log('Media stream obtained successfully');
       streamRef.current = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         // Ensure video plays
-        videoRef.current.play().catch(err => {
-          console.warn('Video autoplay failed:', err);
-        });
+        try {
+          await videoRef.current.play();
+          console.log('Video playback started');
+        } catch (playErr) {
+          console.warn('Video autoplay failed:', playErr);
+          // Try to play with user interaction
+        }
       }
 
       setIsInitialized(true);
       setError(null);
+      console.log('Camera initialized successfully');
     } catch (err: any) {
       console.error('Error accessing media devices:', err);
       console.error('Error name:', err.name);
@@ -80,11 +104,35 @@ export function VideoRecorder({
       // Set error message based on error type
       let errorMessage = 'Camera not available';
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        errorMessage = 'Camera permission denied. Please allow camera access in your browser settings.';
+        errorMessage = 'Camera permission denied. Please click "Allow" when prompted, or enable camera in browser settings.';
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        errorMessage = 'No camera found. Please connect a camera and refresh.';
+        errorMessage = 'No camera found. Please connect a camera and refresh the page.';
       } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        errorMessage = 'Camera is already in use by another application.';
+        errorMessage = 'Camera is already in use by another application. Please close other apps using the camera and try again.';
+      } else if (err.name === 'OverconstrainedError') {
+        errorMessage = 'Camera does not support the requested settings. Trying with default settings...';
+        // Retry with simpler constraints
+        try {
+          const simpleStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+          streamRef.current = simpleStream;
+          if (videoRef.current) {
+            videoRef.current.srcObject = simpleStream;
+            await videoRef.current.play();
+          }
+          setIsInitialized(true);
+          setError(null);
+          console.log('Camera initialized with default settings');
+          return;
+        } catch (retryErr) {
+          console.error('Retry with simple constraints failed:', retryErr);
+        }
+      } else if (err.name === 'AbortError') {
+        errorMessage = 'Camera access was aborted. Please try again.';
+      } else if (err.name === 'SecurityError') {
+        errorMessage = 'Camera access blocked by security policy. Please use HTTPS or localhost.';
       }
       
       setIsInitialized(true);
@@ -93,12 +141,30 @@ export function VideoRecorder({
   };
 
   const cleanup = () => {
+    console.log('Cleaning up media resources...');
+    
+    // Stop all tracks in the stream
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        console.log(`Stopping ${track.kind} track`);
+        track.stop();
+      });
+      streamRef.current = null;
     }
+    
+    // Stop media recorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('Stopping media recorder');
       mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
     }
+    
+    // Clear video element
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    
+    console.log('Media cleanup complete');
   };
 
   const startRecording = () => {

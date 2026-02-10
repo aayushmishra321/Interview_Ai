@@ -13,14 +13,29 @@ const router = express.Router();
 
 // Get current user profile
 router.get('/profile', asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user!.userId);
+  console.log('GET /api/user/profile - Request received');
+  console.log('User from token:', req.user);
+  
+  if (!req.user || !req.user.userId) {
+    console.error('No user ID in request');
+    return res.status(401).json({
+      success: false,
+      error: 'User not authenticated',
+      message: 'Please log in to access your profile',
+    });
+  }
+  
+  const user = await User.findById(req.user.userId);
   
   if (!user) {
+    console.error(`User not found: ${req.user.userId}`);
     return res.status(404).json({
       success: false,
       error: 'User not found',
     });
   }
+
+  console.log(`Profile fetched successfully for user: ${user.email}`);
 
   // Calculate real stats from Interview model
   try {

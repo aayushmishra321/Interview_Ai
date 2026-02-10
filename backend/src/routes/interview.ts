@@ -16,36 +16,61 @@ router.post('/create', [
   body('settings.difficulty').isIn(['easy', 'medium', 'hard']),
   body('settings.duration').isInt({ min: 15, max: 120 }),
 ], asyncHandler(async (req, res) => {
+  console.log('POST /api/interview/create - Request received');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('User from token:', req.user);
+  
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.error('Validation errors:', errors.array());
     return res.status(400).json({
       success: false,
       error: 'Validation failed',
       details: errors.array(),
+      message: 'Please check your interview settings and try again',
+    });
+  }
+
+  if (!req.user || !req.user.userId) {
+    console.error('No user ID in request');
+    return res.status(401).json({
+      success: false,
+      error: 'User not authenticated',
+      message: 'Please log in to create an interview',
     });
   }
 
   const { type, settings, resumeId } = req.body;
 
   try {
+    console.log(`Creating ${type} interview for user ${req.user.userId}`);
+    
     // Get user's resume if resumeId provided
     let resumeData = null;
     if (resumeId) {
+      console.log(`Looking for resume: ${resumeId}`);
       const resume = await Resume.findOne({
         _id: resumeId,
-        userId: req.user!.userId,
+        userId: req.user.userId,
       });
       if (resume) {
         resumeData = resume;
+        console.log('Resume found and will be used for question generation');
+      } else {
+        console.log('Resume not found with provided ID');
       }
     } else {
       // Get latest resume
+      console.log('No resumeId provided, looking for latest resume');
       const latestResume = await Resume.findOne({
-        userId: req.user!.userId,
+        userId: req.user.userId,
       }).sort({ uploadDate: -1 });
       
       if (latestResume) {
         resumeData = latestResume;
+        console.log('Latest resume found and will be used');
+      } else {
+        console.log('No resume found for user');
       }
     }
 
@@ -66,16 +91,18 @@ router.post('/create', [
         projects: resumeData.parsedData.projects || [],
         summary: resumeData.parsedData.summary || '',
       };
+      console.log('Resume context added to question generation');
     }
 
-    logger.info(`Generating questions for ${settings.role} with resume context: ${!!resumeData}`);
+    logger.info(`Generating ${questionParams.count} questions for ${settings.role} with resume context: ${!!resumeData}`);
 
     // Generate questions using Gemini AI
     const questions = await geminiService.generateInterviewQuestions(questionParams);
+    console.log(`Generated ${questions.length} questions`);
 
     // Create interview in database
     const interview = new Interview({
-      userId: req.user!.userId,
+      userId: req.user.userId,
       resumeId: resumeData?._id || null,
       type,
       status: 'scheduled',
@@ -106,7 +133,8 @@ router.post('/create', [
 
     await interview.save();
 
-    logger.info(`Interview created: ${interview._id} for user ${req.user!.userId} with ${questions.length} questions`);
+    logger.info(`Interview created: ${interview._id} for user ${req.user.userId} with ${questions.length} questions`);
+    console.log(`Interview created successfully: ${interview._id}`);
 
     res.status(201).json({
       success: true,
@@ -115,6 +143,7 @@ router.post('/create', [
     });
   } catch (error: any) {
     logger.error('Interview creation error:', error);
+    console.error('Interview creation error:', error);
     res.status(500).json({
       success: false,
       error: 'Interview creation failed',
