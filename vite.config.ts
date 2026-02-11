@@ -25,5 +25,52 @@ export default defineConfig({
     port: 5175,
     host: true,
     strictPort: true // Fail if port is not available
-  }
+  },
+
+  // Production optimizations
+  build: {
+    // Code splitting configuration
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-tooltip',
+          ],
+          'chart-vendor': ['chart.js', 'react-chartjs-2', 'recharts'],
+          'editor-vendor': ['@monaco-editor/react', 'prismjs'],
+          'utils': ['axios', 'zustand', 'date-fns', 'clsx', 'tailwind-merge'],
+        },
+      },
+    },
+    // Chunk size warnings
+    chunkSizeWarningLimit: 1000,
+    // Minification with esbuild (faster and built-in)
+    minify: 'esbuild',
+    // Source maps for production debugging (disabled for smaller bundle)
+    sourcemap: false,
+    // Target modern browsers for better optimization
+    target: 'es2020',
+    // Drop console and debugger in production
+    esbuild: {
+      drop: ['console', 'debugger'],
+    },
+  },
+
+  // Performance optimizations
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'axios',
+      'zustand',
+      'socket.io-client',
+    ],
+  },
 })

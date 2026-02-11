@@ -12,7 +12,7 @@ class GeminiService:
             raise ValueError("GEMINI_API_KEY environment variable is required")
         
         genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-1.5-pro"))
+        self.model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
         logger.info("Gemini service initialized successfully")
 
     async def health_check(self) -> Dict[str, str]:

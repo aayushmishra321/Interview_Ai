@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import logger from '../utils/logger';
+import webrtcService from './webrtc';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -24,6 +25,9 @@ export function setupSocketHandlers(io: Server) {
       next(new Error('Authentication error'));
     }
   });
+
+  // Setup WebRTC handlers
+  webrtcService.setupWebRTCHandlers(io);
 
   io.on('connection', (socket: AuthenticatedSocket) => {
     logger.info(`Socket connected: ${socket.id}, User: ${socket.userId}`);

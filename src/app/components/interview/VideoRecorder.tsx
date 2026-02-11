@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { Camera, CameraOff, Mic, MicOff, Settings, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../Card';
+import { useSocket } from '../../hooks/useSocket';
 
 interface VideoRecorderProps {
   isRecording: boolean;
@@ -9,6 +10,9 @@ interface VideoRecorderProps {
   onStopRecording: () => void;
   onVideoData?: (data: Blob) => void;
   onAudioData?: (data: Blob) => void;
+  onAnalysis?: (analysis: any) => void;
+  interviewId?: string;
+  enableRealTimeAnalysis?: boolean;
   className?: string;
 }
 
@@ -18,18 +22,78 @@ export function VideoRecorder({
   onStopRecording,
   onVideoData,
   onAudioData,
+  onAnalysis,
+  interviewId,
+  enableRealTimeAnalysis = false,
   className,
 }: VideoRecorderProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const cleanupCalledRef = useRef(false);
+  const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const [hasVideo, setHasVideo] = useState(true);
   const [hasAudio, setHasAudio] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // Socket for real-time analysis
+  const { sendVideoFrame, on, off } = useSocket({ autoConnect: enableRealTimeAnalysis });
+
+  // Listen for video analysis results
+  useEffect(() => {
+    if (!enableRealTimeAnalysis) return;
+
+    const handleAnalysis = (data: any) => {
+      onAnalysis?.(data);
+    };
+
+    on('video-analysis', handleAnalysis);
+
+    return () => {
+      off('video-analysis', handleAnalysis);
+    };
+  }, [enableRealTimeAnalysis, on, off, onAnalysis]);
+
+  // Send video frames for analysis
+  useEffect(() => {
+    if (!enableRealTimeAnalysis || !isRecording || !interviewId || !videoRef.current) {
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+
+    const sendFrame = () => {
+      if (!videoRef.current || !context) return;
+
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+      // Convert to base64
+      const frameData = canvas.toDataURL('image/jpeg', 0.8);
+
+      // Send to server via socket
+      sendVideoFrame({
+        interviewId,
+        frameData,
+        timestamp: Date.now(),
+      });
+    };
+
+    // Send frame every 2 seconds
+    analysisIntervalRef.current = setInterval(sendFrame, 2000);
+
+    return () => {
+      if (analysisIntervalRef.current) {
+        clearInterval(analysisIntervalRef.current);
+        analysisIntervalRef.current = null;
+      }
+    };
+  }, [enableRealTimeAnalysis, isRecording, interviewId, sendVideoFrame]);
 
   // Cleanup function with safeguards
   const cleanup = useCallback(() => {

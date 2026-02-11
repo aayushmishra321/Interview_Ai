@@ -21,6 +21,8 @@ import feedbackRoutes from './routes/feedback';
 import adminRoutes from './routes/admin';
 import codeExecutionRoutes from './routes/codeExecution';
 import paymentRoutes from './routes/payment';
+import practiceRoutes from './routes/practice';
+import schedulingRoutes from './routes/scheduling';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -202,6 +204,8 @@ app.use('/api/feedback', apiLimiter, authenticateToken, feedbackRoutes);
 app.use('/api/admin', apiLimiter, authenticateToken, adminRoutes);
 app.use('/api/code', apiLimiter, codeExecutionRoutes);
 app.use('/api/payment', apiLimiter, paymentRoutes);
+app.use('/api/practice', apiLimiter, authenticateToken, practiceRoutes);
+app.use('/api/scheduling', apiLimiter, authenticateToken, schedulingRoutes);
 
 // Error handling middleware
 app.use(notFound);

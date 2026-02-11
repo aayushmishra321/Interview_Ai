@@ -1,345 +1,388 @@
-import express from 'express';
-import { requireAdmin } from '../middleware/auth';
+import express, { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { asyncHandler } from '../middleware/errorHandler';
+import { requireAdmin } from '../middleware/auth';
 import User from '../models/User';
+import Interview from '../models/Interview';
+import Resume from '../models/Resume';
 import logger from '../utils/logger';
+import os from 'os';
 
 const router = express.Router();
 
-// Apply admin middleware to all routes
+// All admin routes require admin authentication
 router.use(requireAdmin);
 
-// Get admin dashboard stats
-router.get('/stats', asyncHandler(async (req, res) => {
+// Get platform statistics
+router.get('/stats', asyncHandler(async (req: Request, res: Response) => {
+  console.log('=== ADMIN: Getting platform stats ===');
+
   try {
     // Get user statistics
     const totalUsers = await User.countDocuments();
     const activeUsers = await User.countDocuments({
-      'auth.lastLogin': { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }, // Last 30 days
+      'auth.lastLogin': { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+    });
+    const newUsersThisMonth = await User.countDocuments({
+      createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
     });
 
-    // TODO: Get interview statistics from Interview model
-    const mockStats = {
-      totalUsers,
-      activeUsers,
-      totalInterviews: 1250,
-      averageSessionDuration: 42, // minutes
-      popularRoles: [
-        { role: 'Software Engineer', count: 450, averageScore: 82 },
-        { role: 'Data Scientist', count: 320, averageScore: 78 },
-        { role: 'Product Manager', count: 280, averageScore: 85 },
-        { role: 'DevOps Engineer', count: 200, averageScore: 80 },
-      ],
-      userGrowth: [
-        { date: '2024-01-01', newUsers: 45, totalUsers: 1200 },
-        { date: '2024-01-02', newUsers: 52, totalUsers: 1252 },
-        { date: '2024-01-03', newUsers: 38, totalUsers: 1290 },
-      ],
-      systemHealth: {
-        apiResponseTime: 120, // ms
-        aiProcessingTime: 2500, // ms
-        errorRate: 0.02, // 2%
-        uptime: 99.9, // %
+    // Get interview statistics
+    const totalInterviews = await Interview.countDocuments();
+    const completedInterviews = await Interview.countDocuments({ status: 'completed' });
+    const inProgressInterviews = await Interview.countDocuments({ status: 'in-progress' });
+    
+    // Calculate average success rate
+    const interviewsWithScores = await Interview.find({
+      status: 'completed',
+      'analysis.overallScore': { $exists: true }
+    }).select('analysis.overallScore');
+    
+    const avgSuccessRate = interviewsWithScores.length > 0
+      ? Math.round(interviewsWithScores.reduce((sum, i) => sum + (i.analysis?.overallScore || 0), 0) / interviewsWithScores.length)
+      : 0;
+
+    // Get interview type breakdown
+    const interviewTypes = await Interview.aggregate([
+      { $group: { _id: '$type', count: { $sum: 1 } } }
+    ]);
+
+    // Get user growth data (last 7 months)
+    const userGrowth = await User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: new Date(Date.now() - 7 * 30 * 24 * 60 * 60 * 1000) }
+        }
       },
-    };
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    // Get subscription breakdown
+    const subscriptionStats = await User.aggregate([
+      { $group: { _id: '$subscription.plan', count: { $sum: 1 } } }
+    ]);
 
     res.json({
       success: true,
-      data: mockStats,
+      data: {
+        users: {
+          total: totalUsers,
+          active: activeUsers,
+          newThisMonth: newUsersThisMonth,
+          growth: userGrowth,
+          subscriptions: subscriptionStats
+        },
+        interviews: {
+          total: totalInterviews,
+          completed: completedInterviews,
+          inProgress: inProgressInterviews,
+          avgSuccessRate,
+          byType: interviewTypes
+        },
+        timestamp: new Date()
+      }
     });
   } catch (error: any) {
     logger.error('Admin stats error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get admin stats',
-      message: error.message,
+      error: 'Failed to get platform statistics',
+      message: error.message
     });
   }
 }));
 
-// Get all users with pagination
-router.get('/users', asyncHandler(async (req, res) => {
+// Get all users (paginated)
+router.get('/users', asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
   const search = req.query.search as string;
-  const sortBy = req.query.sortBy as string || 'createdAt';
-  const sortOrder = req.query.sortOrder as string || 'desc';
+  const plan = req.query.plan as string;
 
-  try {
-    const query: any = {};
-    
-    if (search) {
-      query.$or = [
-        { email: { $regex: search, $options: 'i' } },
-        { 'profile.firstName': { $regex: search, $options: 'i' } },
-        { 'profile.lastName': { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    const users = await User.find(query)
-      .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .select('-password');
-
-    const total = await User.countDocuments(query);
-
-    res.json({
-      success: true,
-      data: users,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
-  } catch (error: any) {
-    logger.error('Admin get users error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get users',
-      message: error.message,
-    });
+  const query: any = {};
+  
+  if (search) {
+    query.$or = [
+      { email: { $regex: search, $options: 'i' } },
+      { 'profile.firstName': { $regex: search, $options: 'i' } },
+      { 'profile.lastName': { $regex: search, $options: 'i' } }
+    ];
   }
+
+  if (plan) {
+    query['subscription.plan'] = plan;
+  }
+
+  const users = await User.find(query)
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .skip((page - 1) * limit)
+    .select('-password');
+
+  const total = await User.countDocuments(query);
+
+  res.json({
+    success: true,
+    data: users,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  });
 }));
 
 // Get specific user details
-router.get('/users/:id', asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const user = await User.findById(id).select('-password');
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found',
-      });
-    }
-
-    // TODO: Get user's interview statistics
-    const userStats = {
-      totalInterviews: user.stats.totalInterviews,
-      averageScore: user.stats.averageScore,
-      lastInterviewDate: user.stats.lastInterviewDate,
-      recentActivity: [
-        {
-          type: 'interview_completed',
-          date: new Date().toISOString(),
-          details: 'Behavioral Interview - Software Engineer',
-        },
-      ],
-    };
-
-    res.json({
-      success: true,
-      data: {
-        user: user.toJSON(),
-        stats: userStats,
-      },
-    });
-  } catch (error: any) {
-    logger.error('Admin get user error:', error);
-    res.status(500).json({
+router.get('/users/:id', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const user = await User.findById(req.params.id).select('-password');
+  
+  if (!user) {
+    res.status(404).json({
       success: false,
-      error: 'Failed to get user',
-      message: error.message,
+      error: 'User not found'
     });
+    return;
   }
+
+  // Get user's interviews
+  const interviews = await Interview.find({ userId: user._id })
+    .sort({ createdAt: -1 })
+    .limit(10);
+
+  // Get user's resumes
+  const resumes = await Resume.find({ userId: user._id })
+    .sort({ uploadDate: -1 })
+    .limit(5);
+
+  res.json({
+    success: true,
+    data: {
+      user,
+      interviews,
+      resumes
+    }
+  });
 }));
 
-// Update user (admin only)
-router.put('/users/:id', asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
-
-  try {
-    const user = await User.findById(id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found',
-      });
-    }
-
-    // Update allowed fields
-    if (updates.profile) {
-      user.profile = { ...user.profile, ...updates.profile };
-    }
-    
-    if (updates.subscription) {
-      user.subscription = { ...user.subscription, ...updates.subscription };
-    }
-
-    if (updates.auth) {
-      user.auth = { ...user.auth, ...updates.auth };
-    }
-
-    await user.save();
-
-    logger.info(`User updated by admin: ${id}`);
-
-    res.json({
-      success: true,
-      data: user.toJSON(),
-      message: 'User updated successfully',
-    });
-  } catch (error: any) {
-    logger.error('Admin update user error:', error);
-    res.status(500).json({
+// Update user
+router.put('/users/:id', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { subscription, auth, profile } = req.body;
+  
+  const user = await User.findById(req.params.id);
+  
+  if (!user) {
+    res.status(404).json({
       success: false,
-      error: 'Failed to update user',
-      message: error.message,
+      error: 'User not found'
     });
+    return;
   }
+
+  // Update subscription if provided
+  if (subscription) {
+    if (subscription.plan) user.subscription.plan = subscription.plan;
+    if (subscription.status) user.subscription.status = subscription.status;
+  }
+
+  // Update auth if provided
+  if (auth) {
+    if (auth.role) user.auth.role = auth.role;
+    if (auth.isVerified !== undefined) user.auth.isVerified = auth.isVerified;
+  }
+
+  // Update profile if provided
+  if (profile) {
+    if (profile.firstName) user.profile.firstName = profile.firstName;
+    if (profile.lastName) user.profile.lastName = profile.lastName;
+  }
+
+  await user.save();
+
+  logger.info(`Admin updated user: ${user.email}`);
+
+  res.json({
+    success: true,
+    data: user,
+    message: 'User updated successfully'
+  });
 }));
 
-// Delete user (admin only)
-router.delete('/users/:id', asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const user = await User.findById(id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found',
-      });
-    }
-
-    // TODO: Delete related data (interviews, resumes, etc.)
-    await User.findByIdAndDelete(id);
-
-    logger.info(`User deleted by admin: ${id} (${user.email})`);
-
-    res.json({
-      success: true,
-      message: 'User deleted successfully',
-    });
-  } catch (error: any) {
-    logger.error('Admin delete user error:', error);
-    res.status(500).json({
+// Delete user
+router.delete('/users/:id', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const user = await User.findById(req.params.id);
+  
+  if (!user) {
+    res.status(404).json({
       success: false,
-      error: 'Failed to delete user',
-      message: error.message,
+      error: 'User not found'
     });
+    return;
   }
+
+  // Delete user's interviews
+  await Interview.deleteMany({ userId: user._id });
+  
+  // Delete user's resumes
+  await Resume.deleteMany({ userId: user._id });
+  
+  // Delete user
+  await User.findByIdAndDelete(req.params.id);
+
+  logger.info(`Admin deleted user: ${user.email}`);
+
+  res.json({
+    success: true,
+    message: 'User and all associated data deleted successfully'
+  });
 }));
 
-// Get all interviews (admin view)
-router.get('/interviews', asyncHandler(async (req, res) => {
+// Get all interviews (paginated)
+router.get('/interviews', asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
   const status = req.query.status as string;
   const type = req.query.type as string;
 
-  try {
-    // TODO: Implement with Interview model
-    const mockInterviews = [
-      {
-        id: 'interview_1',
-        userId: 'user_1',
-        userEmail: 'john@example.com',
-        type: 'behavioral',
-        status: 'completed',
-        settings: {
-          role: 'Software Engineer',
-          difficulty: 'medium',
-          duration: 45,
-        },
-        analysis: {
-          overallScore: 85,
-        },
-        createdAt: new Date().toISOString(),
-      },
-    ];
+  const query: any = {};
+  
+  if (status) query.status = status;
+  if (type) query.type = type;
 
-    res.json({
-      success: true,
-      data: mockInterviews,
-      pagination: {
-        page,
-        limit,
-        total: mockInterviews.length,
-        totalPages: Math.ceil(mockInterviews.length / limit),
-      },
-    });
-  } catch (error: any) {
-    logger.error('Admin get interviews error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get interviews',
-      message: error.message,
-    });
-  }
+  const interviews = await Interview.find(query)
+    .populate('userId', 'email profile.firstName profile.lastName')
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .skip((page - 1) * limit);
+
+  const total = await Interview.countDocuments(query);
+
+  res.json({
+    success: true,
+    data: interviews,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  });
 }));
 
-// System health check
-router.get('/health', asyncHandler(async (req, res) => {
-  try {
-    // Check database connection
-    const dbStatus = await User.findOne().limit(1);
-    
-    // TODO: Check other services (Redis, Cloudinary, AI server)
-    const healthStatus = {
-      database: dbStatus ? 'healthy' : 'unhealthy',
-      redis: 'healthy', // TODO: Implement Redis health check
-      cloudinary: 'healthy', // TODO: Implement Cloudinary health check
-      aiServer: 'healthy', // TODO: Implement AI server health check
+// Get system metrics
+router.get('/system-metrics', asyncHandler(async (_req: Request, res: Response) => {
+  const cpuUsage = os.loadavg()[0] / os.cpus().length * 100;
+  const totalMemory = os.totalmem();
+  const freeMemory = os.freemem();
+  const memoryUsage = ((totalMemory - freeMemory) / totalMemory) * 100;
+
+  // Get database stats
+  const dbStats = await mongoose.connection.db.stats();
+
+  res.json({
+    success: true,
+    data: {
+      cpu: Math.round(cpuUsage),
+      memory: Math.round(memoryUsage),
       uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      timestamp: new Date().toISOString(),
-    };
-
-    res.json({
-      success: true,
-      data: healthStatus,
-    });
-  } catch (error: any) {
-    logger.error('Admin health check error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Health check failed',
-      message: error.message,
-    });
-  }
+      platform: os.platform(),
+      nodeVersion: process.version,
+      database: {
+        size: dbStats.dataSize,
+        collections: dbStats.collections,
+        indexes: dbStats.indexes
+      },
+      timestamp: new Date()
+    }
+  });
 }));
 
-// System logs
-router.get('/logs', asyncHandler(async (req, res) => {
-  const level = req.query.level as string || 'info';
-  const limit = parseInt(req.query.limit as string) || 100;
+// Get error logs
+router.get('/error-logs', asyncHandler(async (req: Request, res: Response) => {
+  const limit = parseInt(req.query.limit as string) || 50;
+  
+  // This is a simplified version - in production, you'd read from actual log files
+  // For now, return mock data structure
+  const logs = [
+    {
+      severity: 'error',
+      message: 'Database connection timeout',
+      timestamp: new Date(Date.now() - 3600000),
+      stack: 'Error: Connection timeout...'
+    },
+    {
+      severity: 'warning',
+      message: 'High API response time detected',
+      timestamp: new Date(Date.now() - 600000),
+      stack: null
+    }
+  ];
 
-  try {
-    // TODO: Implement log retrieval from Winston logs
-    const mockLogs = [
-      {
-        timestamp: new Date().toISOString(),
-        level: 'info',
-        message: 'User logged in: john@example.com',
-      },
-      {
-        timestamp: new Date().toISOString(),
-        level: 'error',
-        message: 'Database connection error',
-      },
-    ];
+  res.json({
+    success: true,
+    data: logs.slice(0, limit)
+  });
+}));
 
-    res.json({
-      success: true,
-      data: mockLogs,
-    });
-  } catch (error: any) {
-    logger.error('Admin get logs error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get logs',
-      message: error.message,
-    });
-  }
+// Get recent activity
+router.get('/activity', asyncHandler(async (req: Request, res: Response) => {
+  const limit = parseInt(req.query.limit as string) || 20;
+
+  // Get recent interviews
+  const recentInterviews = await Interview.find()
+    .populate('userId', 'email')
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .select('userId type status createdAt analysis.overallScore');
+
+  const activities = recentInterviews.map(interview => ({
+    user: (interview.userId as any)?.email || 'Unknown',
+    action: `${interview.status === 'completed' ? 'Completed' : 'Started'} ${interview.type} Interview`,
+    time: interview.createdAt,
+    score: interview.status === 'completed' ? interview.analysis?.overallScore : null
+  }));
+
+  res.json({
+    success: true,
+    data: activities
+  });
+}));
+
+// Get AI performance metrics
+router.get('/ai-metrics', asyncHandler(async (_req: Request, res: Response) => {
+  // Calculate AI performance based on interview data
+  const completedInterviews = await Interview.find({
+    status: 'completed',
+    'analysis.overallScore': { $exists: true }
+  }).select('analysis createdAt');
+
+  // Calculate metrics
+  const accuracy = completedInterviews.length > 0 ? 94 : 0; // Mock for now
+  const avgResponseTime = 88; // Mock
+  const userSatisfaction = 92; // Mock
+  const questionQuality = 89; // Mock
+  const feedbackAccuracy = 91; // Mock
+
+  res.json({
+    success: true,
+    data: {
+      accuracy,
+      responseTime: avgResponseTime,
+      userSatisfaction,
+      questionQuality,
+      feedbackAccuracy,
+      totalAnalyzed: completedInterviews.length
+    }
+  });
 }));
 
 export default router;

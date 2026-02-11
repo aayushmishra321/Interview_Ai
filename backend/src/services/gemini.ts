@@ -12,8 +12,8 @@ class GeminiService {
     }
 
     this.genAI = new GoogleGenerativeAI(apiKey);
-    // Use gemini-1.5-flash which is available in the current API
-    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    // Use gemini-2.5-flash model (latest available)
+    const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     this.model = this.genAI.getGenerativeModel({ 
       model: modelName
     });

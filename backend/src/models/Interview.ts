@@ -5,6 +5,7 @@ export interface IInterview extends Document {
   resumeId?: mongoose.Types.ObjectId;
   type: 'behavioral' | 'technical' | 'coding' | 'system-design';
   status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+  scheduledTime?: Date;
   settings: {
     role: string;
     difficulty: 'easy' | 'medium' | 'hard';
@@ -114,6 +115,8 @@ export interface IInterview extends Document {
       browserInfo?: string;
       deviceInfo?: string;
       networkQuality?: string;
+      reminderEnabled?: boolean;
+      reminderSent?: boolean;
     };
   };
   createdAt: Date;
@@ -141,6 +144,11 @@ const interviewSchema = new Schema<IInterview>({
     type: String,
     enum: ['scheduled', 'in-progress', 'completed', 'cancelled'],
     default: 'scheduled',
+    index: true,
+  },
+  scheduledTime: {
+    type: Date,
+    default: null,
     index: true,
   },
   settings: {
@@ -182,6 +190,10 @@ const interviewSchema = new Schema<IInterview>({
       type: String,
       required: true,
     },
+    description: {
+      type: String,
+      default: null,
+    },
     type: {
       type: String,
       enum: ['behavioral', 'technical', 'coding'],
@@ -202,6 +214,18 @@ const interviewSchema = new Schema<IInterview>({
       type: String,
       default: null,
     },
+    examples: [{
+      input: String,
+      output: String,
+      explanation: String,
+    }],
+    constraints: [{
+      type: String,
+    }],
+    testCases: [{
+      input: String,
+      expectedOutput: String,
+    }],
   }],
   responses: [{
     questionId: {

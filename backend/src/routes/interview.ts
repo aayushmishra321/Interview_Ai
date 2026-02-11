@@ -114,7 +114,7 @@ router.post('/create', [
       experienceLevel: 'mid', // TODO: Get from user profile
       interviewType: type,
       difficulty: settings.difficulty,
-      count: Math.floor(settings.duration / 5), // ~5 minutes per question
+      count: Math.min(5, Math.floor(settings.duration / 5)), // Max 5 questions for faster generation
     };
 
     // Add resume context if available
@@ -131,9 +131,23 @@ router.post('/create', [
     logger.info(`Generating ${questionParams.count} questions for ${settings.role} with resume context: ${!!resumeData}`);
     console.log('Question generation params:', JSON.stringify(questionParams, null, 2));
 
-    // Generate questions using Gemini AI
-    const questions = await geminiService.generateInterviewQuestions(questionParams);
-    console.log(`Generated ${questions.length} questions`);
+    // Generate questions using Gemini AI with timeout
+    console.log('Starting question generation with 30s timeout...');
+    const questionGenerationPromise = geminiService.generateInterviewQuestions(questionParams);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Question generation timeout')), 30000)
+    );
+    
+    let questions;
+    try {
+      questions = await Promise.race([questionGenerationPromise, timeoutPromise]) as any[];
+      console.log(`Generated ${questions.length} questions successfully`);
+    } catch (timeoutError: any) {
+      console.warn('Question generation timed out, using fallback questions');
+      logger.warn('Question generation timeout, using fallback');
+      // Use fallback - will be handled by gemini service
+      questions = await geminiService.generateInterviewQuestions(questionParams);
+    }
 
     // Create interview in database
     const interview = new Interview({
@@ -152,11 +166,15 @@ router.post('/create', [
       questions: questions.map((q: any) => ({
         id: q.id || `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         text: q.text,
+        description: q.description || null,
         type: q.type || type,
         difficulty: q.difficulty || settings.difficulty,
         expectedDuration: q.expectedDuration || 5,
         followUpQuestions: q.followUpQuestions || [],
         category: q.category || 'general',
+        examples: q.examples || [],
+        constraints: q.constraints || [],
+        testCases: q.testCases || [],
       })),
       responses: [],
       session: {
@@ -175,9 +193,16 @@ router.post('/create', [
     console.log(`Type: ${type}`);
     console.log(`Role: ${settings.role}`);
 
+    // Return interview with both _id and id for compatibility
+    const interviewData = interview.toObject();
+    const responseData = {
+      ...interviewData,
+      id: interview._id.toString(), // Ensure id is always present
+    };
+
     res.status(201).json({
       success: true,
-      data: interview,
+      data: responseData,
       message: 'Interview created successfully',
     });
   } catch (error: any) {

@@ -1,194 +1,253 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useSocket } from './useSocket';
 
-interface WebRTCConfig {
-  iceServers: RTCIceServer[];
-  constraints: MediaStreamConstraints;
+interface UseWebRTCOptions {
+  interviewId: string;
+  autoConnect?: boolean;
 }
 
-interface UseWebRTCReturn {
-  localStream: MediaStream | null;
-  remoteStream: MediaStream | null;
-  peerConnection: RTCPeerConnection | null;
-  isConnected: boolean;
-  error: string | null;
-  startConnection: () => Promise<void>;
-  endConnection: () => void;
-  sendData: (data: any) => void;
-}
-
-const defaultConfig: WebRTCConfig = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-  ],
-  constraints: {
-    video: {
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
-      frameRate: { ideal: 30 },
-    },
-    audio: {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
-    },
-  },
-};
-
-export function useWebRTC(config: Partial<WebRTCConfig> = {}) {
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+export function useWebRTC({ interviewId, autoConnect = false }: UseWebRTCOptions) {
+  const { socket, isConnected } = useSocket({ autoConnect: true });
+  const [isReady, setIsReady] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
-  const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
-  const finalConfig = { ...defaultConfig, ...config };
+  // ICE servers configuration
+  const iceServers = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ],
+  };
 
-  // Update ref when localStream changes
-  useEffect(() => {
-    localStreamRef.current = localStream;
-  }, [localStream]);
+  // Initialize peer connection
+  const initializePeerConnection = useCallback(() => {
+    if (peerConnectionRef.current) {
+      return peerConnectionRef.current;
+    }
 
-  const createPeerConnection = useCallback(() => {
-    const pc = new RTCPeerConnection({
-      iceServers: finalConfig.iceServers,
-    });
+    const pc = new RTCPeerConnection(iceServers);
 
     // Handle ICE candidates
     pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        // Send candidate to remote peer via signaling server
-        console.log('ICE candidate:', event.candidate);
+      if (event.candidate && socket) {
+        socket.emit('webrtc:ice-candidate', {
+          interviewId,
+          candidate: event.candidate.toJSON(),
+        });
       }
     };
 
     // Handle remote stream
     pc.ontrack = (event) => {
-      setRemoteStream(event.streams[0]);
+      console.log('Received remote track:', event.track.kind);
+      if (event.streams && event.streams[0]) {
+        setRemoteStream(event.streams[0]);
+      }
     };
 
     // Handle connection state changes
     pc.onconnectionstatechange = () => {
-      setIsConnected(pc.connectionState === 'connected');
-      
-      if (pc.connectionState === 'failed') {
+      console.log('Connection state:', pc.connectionState);
+      if (pc.connectionState === 'connected') {
+        setIsConnecting(false);
+        setIsReady(true);
+      } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
         setError('Connection failed');
+        setIsConnecting(false);
       }
     };
 
-    // Create data channel for sending metadata
-    const dataChannel = pc.createDataChannel('metadata', {
-      ordered: true,
+    // Handle ICE connection state changes
+    pc.oniceconnectionstatechange = () => {
+      console.log('ICE connection state:', pc.iceConnectionState);
+    };
+
+    peerConnectionRef.current = pc;
+    return pc;
+  }, [interviewId, socket]);
+
+  // Add local stream to peer connection
+  const addLocalStream = useCallback(async (stream: MediaStream) => {
+    const pc = initializePeerConnection();
+    localStreamRef.current = stream;
+
+    // Add tracks to peer connection
+    stream.getTracks().forEach((track) => {
+      pc.addTrack(track, stream);
     });
 
-    dataChannel.onopen = () => {
-      console.log('Data channel opened');
-    };
+    console.log('Local stream added to peer connection');
+  }, [initializePeerConnection]);
 
-    dataChannel.onmessage = (event) => {
-      console.log('Received data:', event.data);
-    };
+  // Create offer
+  const createOffer = useCallback(async () => {
+    if (!socket || !isConnected) {
+      setError('Socket not connected');
+      return;
+    }
 
-    dataChannelRef.current = dataChannel;
-    peerConnectionRef.current = pc;
-
-    return pc;
-  }, [finalConfig.iceServers]);
-
-  const startConnection = useCallback(async () => {
     try {
-      setError(null);
+      setIsConnecting(true);
+      const pc = initializePeerConnection();
 
-      // Get user media
-      const stream = await navigator.mediaDevices.getUserMedia(finalConfig.constraints);
-      setLocalStream(stream);
-
-      // Create peer connection
-      const pc = createPeerConnection();
-
-      // Add local stream to peer connection
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
       });
 
-      // Create offer
-      const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // Send offer to remote peer via signaling server
-      console.log('Created offer:', offer);
+      socket.emit('webrtc:offer', {
+        interviewId,
+        offer: offer.toJSON(),
+      });
 
+      console.log('Offer created and sent');
     } catch (err: any) {
-      setError(err.message || 'Failed to start connection');
-      console.error('WebRTC error:', err);
+      console.error('Error creating offer:', err);
+      setError(err.message);
+      setIsConnecting(false);
     }
-  }, [finalConfig.constraints, createPeerConnection]);
+  }, [socket, isConnected, interviewId, initializePeerConnection]);
 
-  const endConnection = useCallback(() => {
-    // Stop local stream using ref to avoid dependency
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
-      setLocalStream(null);
-      localStreamRef.current = null;
+  // Handle incoming offer
+  const handleOffer = useCallback(async (data: { userId: string; offer: RTCSessionDescriptionInit }) => {
+    try {
+      const pc = initializePeerConnection();
+
+      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      if (socket) {
+        socket.emit('webrtc:answer', {
+          interviewId,
+          answer: answer.toJSON(),
+        });
+      }
+
+      console.log('Answer created and sent');
+    } catch (err: any) {
+      console.error('Error handling offer:', err);
+      setError(err.message);
+    }
+  }, [interviewId, socket, initializePeerConnection]);
+
+  // Handle incoming answer
+  const handleAnswer = useCallback(async (data: { userId: string; answer: RTCSessionDescriptionInit }) => {
+    try {
+      const pc = peerConnectionRef.current;
+      if (!pc) {
+        console.error('No peer connection available');
+        return;
+      }
+
+      await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+      console.log('Answer received and set');
+    } catch (err: any) {
+      console.error('Error handling answer:', err);
+      setError(err.message);
+    }
+  }, []);
+
+  // Handle incoming ICE candidate
+  const handleIceCandidate = useCallback(async (data: { userId: string; candidate: RTCIceCandidateInit }) => {
+    try {
+      const pc = peerConnectionRef.current;
+      if (!pc) {
+        console.error('No peer connection available');
+        return;
+      }
+
+      await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+      console.log('ICE candidate added');
+    } catch (err: any) {
+      console.error('Error adding ICE candidate:', err);
+    }
+  }, []);
+
+  // Setup socket listeners
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.on('webrtc:offer', handleOffer);
+    socket.on('webrtc:answer', handleAnswer);
+    socket.on('webrtc:ice-candidate', handleIceCandidate);
+
+    socket.on('webrtc:peer-ready', (data: { userId: string }) => {
+      console.log('Peer ready:', data.userId);
+    });
+
+    socket.on('webrtc:peer-disconnected', (data: { userId: string }) => {
+      console.log('Peer disconnected:', data.userId);
+      setRemoteStream(null);
+    });
+
+    return () => {
+      socket.off('webrtc:offer', handleOffer);
+      socket.off('webrtc:answer', handleAnswer);
+      socket.off('webrtc:ice-candidate', handleIceCandidate);
+      socket.off('webrtc:peer-ready');
+      socket.off('webrtc:peer-disconnected');
+    };
+  }, [socket, isConnected, handleOffer, handleAnswer, handleIceCandidate]);
+
+  // Notify that we're ready
+  const notifyReady = useCallback(() => {
+    if (socket && isConnected) {
+      socket.emit('webrtc:ready', { interviewId });
+    }
+  }, [socket, isConnected, interviewId]);
+
+  // Disconnect
+  const disconnect = useCallback(() => {
+    if (socket && isConnected) {
+      socket.emit('webrtc:disconnect', { interviewId });
     }
 
-    // Close peer connection
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
 
-    // Close data channel
-    if (dataChannelRef.current) {
-      dataChannelRef.current.close();
-      dataChannelRef.current = null;
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
     }
 
     setRemoteStream(null);
-    setIsConnected(false);
-    setError(null);
-  }, []); // Remove localStream dependency to prevent unnecessary re-renders
+    setIsReady(false);
+    setIsConnecting(false);
+  }, [socket, isConnected, interviewId]);
 
-  const sendData = useCallback((data: any) => {
-    if (dataChannelRef.current && dataChannelRef.current.readyState === 'open') {
-      dataChannelRef.current.send(JSON.stringify(data));
+  // Auto-connect if enabled
+  useEffect(() => {
+    if (autoConnect && isConnected && !isReady && !isConnecting) {
+      notifyReady();
     }
-  }, []);
-
-  // Handle answer from remote peer
-  const handleAnswer = useCallback(async (answer: RTCSessionDescriptionInit) => {
-    if (peerConnectionRef.current) {
-      await peerConnectionRef.current.setRemoteDescription(answer);
-    }
-  }, []);
-
-  // Handle ICE candidate from remote peer
-  const handleIceCandidate = useCallback(async (candidate: RTCIceCandidateInit) => {
-    if (peerConnectionRef.current) {
-      await peerConnectionRef.current.addIceCandidate(candidate);
-    }
-  }, []);
+  }, [autoConnect, isConnected, isReady, isConnecting, notifyReady]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      endConnection();
+      disconnect();
     };
-  }, [endConnection]);
+  }, [disconnect]);
 
   return {
-    localStream,
-    remoteStream,
-    peerConnection: peerConnectionRef.current,
-    isConnected,
+    isReady,
+    isConnecting,
     error,
-    startConnection,
-    endConnection,
-    sendData,
-    handleAnswer,
-    handleIceCandidate,
+    remoteStream,
+    addLocalStream,
+    createOffer,
+    notifyReady,
+    disconnect,
   };
 }

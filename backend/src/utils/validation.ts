@@ -227,34 +227,52 @@ export const loginValidation = (): ValidationChain[] => {
   ];
 };
 
-// Profile update validation
+// Profile update validation - RELAXED for better UX
 export const profileUpdateValidation = (): ValidationChain[] => {
   return [
     body('profile.firstName')
       .optional()
       .trim()
-      .isLength({ min: 1, max: 50 })
-      .withMessage('First name must be between 1 and 50 characters'),
+      .isLength({ min: 1, max: 100 })
+      .withMessage('First name must be between 1 and 100 characters'),
     body('profile.lastName')
       .optional()
       .trim()
-      .isLength({ min: 1, max: 50 })
-      .withMessage('Last name must be between 1 and 50 characters'),
-    phoneValidation(),
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Last name must be between 1 and 100 characters'),
+    body('profile.phone')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim()
+      .custom((value) => {
+        // Allow empty string or valid phone
+        if (!value || value === '') return true;
+        if (!/^[\d\s\-\+\(\)]+$/.test(value)) {
+          throw new Error('Please provide a valid phone number');
+        }
+        if (value.length < 10 || value.length > 20) {
+          throw new Error('Phone number must be between 10 and 20 characters');
+        }
+        return true;
+      }),
     body('profile.location')
-      .optional()
+      .optional({ nullable: true, checkFalsy: true })
       .trim()
-      .isLength({ max: 100 })
-      .withMessage('Location must be less than 100 characters'),
+      .isLength({ max: 200 })
+      .withMessage('Location must be less than 200 characters'),
     body('preferences.role')
-      .optional()
+      .optional({ nullable: true, checkFalsy: true })
       .trim()
-      .isLength({ max: 100 })
-      .withMessage('Role must be less than 100 characters'),
+      .isLength({ max: 200 })
+      .withMessage('Role must be less than 200 characters'),
     body('preferences.experienceLevel')
-      .optional()
-      .isIn(['entry', 'mid', 'senior', 'executive'])
-      .withMessage('Experience level must be entry, mid, senior, or executive'),
+      .optional({ nullable: true, checkFalsy: true })
+      .custom((value) => {
+        if (!value || value === '') return true;
+        if (!['entry', 'mid', 'senior', 'executive'].includes(value)) {
+          throw new Error('Experience level must be entry, mid, senior, or executive');
+        }
+        return true;
+      }),
   ];
 };
 

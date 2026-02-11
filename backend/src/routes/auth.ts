@@ -54,6 +54,14 @@ router.post('/register', registrationValidation(), async (req, res): Promise<voi
       },
     });
 
+    // Generate verification token
+    const verificationToken = jwt.sign(
+      { userId: user._id, type: 'email-verification' },
+      process.env.JWT_ACCESS_SECRET!,
+      { expiresIn: '24h' }
+    );
+    
+    user.auth.verificationToken = verificationToken;
     await user.save();
 
     // Generate tokens
@@ -63,12 +71,12 @@ router.post('/register', registrationValidation(), async (req, res): Promise<voi
     user.auth.lastLogin = new Date();
     await user.save();
 
-    // Send welcome email
+    // Send verification email
     try {
-      await emailService.sendWelcomeEmail(user.email, user.profile.firstName);
-      logger.info(`Welcome email sent to: ${email}`);
+      await emailService.sendVerificationEmail(user.email, verificationToken);
+      logger.info(`Verification email sent to: ${email}`);
     } catch (emailError) {
-      logger.error(`Failed to send welcome email to ${email}:`, emailError);
+      logger.error(`Failed to send verification email to ${email}:`, emailError);
       // Don't fail registration if email fails
     }
 
@@ -378,9 +386,14 @@ router.post('/forgot-password', emailValidation(), async (req, res): Promise<voi
     user.auth.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
     await user.save();
 
-    // TODO: Send email with reset link
-    // For now, we'll just log it
-    logger.info(`Password reset requested for: ${email}, token: ${resetToken}`);
+    // Send password reset email
+    try {
+      await emailService.sendPasswordResetEmail(user.email, resetToken);
+      logger.info(`Password reset email sent to: ${email}`);
+    } catch (emailError) {
+      logger.error(`Failed to send password reset email to ${email}:`, emailError);
+      // Don't fail the request if email fails
+    }
 
     res.json({
       success: true,
@@ -579,8 +592,14 @@ router.post('/resend-verification', [
     user.auth.verificationToken = verificationToken;
     await user.save();
 
-    // TODO: Send verification email
-    logger.info(`Verification email resent to: ${email}, token: ${verificationToken}`);
+    // Send verification email
+    try {
+      await emailService.sendVerificationEmail(user.email, verificationToken);
+      logger.info(`Verification email resent to: ${email}`);
+    } catch (emailError) {
+      logger.error(`Failed to resend verification email to ${email}:`, emailError);
+      // Don't fail the request if email fails
+    }
 
     res.json({
       success: true,

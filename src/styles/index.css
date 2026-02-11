@@ -2,3 +2,5 @@
 @import './tailwind.css';
 @import './theme.css';
 @import './custom.css';
+@import './animations.css';
+@import './components.css';

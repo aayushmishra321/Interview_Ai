@@ -142,7 +142,8 @@ export function CodingInterviewPage() {
       });
 
       if (response.success && response.data) {
-        const { testResults, executionTime: execTime } = response.data;
+        const data = response.data as any;
+        const { testResults, executionTime: execTime } = data;
         
         setExecutionTime(execTime);
         setTotalTests(testResults.length);
@@ -216,8 +217,9 @@ export function CodingInterviewPage() {
 
       // Check if there are more questions
       const interview = currentInterview || await apiService.get(`/api/interview/${interviewId}`).then(r => r.data);
-      const totalQuestions = interview?.questions?.length || 0;
-      const answeredQuestions = interview?.responses?.length || 0;
+      const interviewData = interview as any;
+      const totalQuestions = interviewData?.questions?.length || 0;
+      const answeredQuestions = interviewData?.responses?.length || 0;
 
       if (answeredQuestions + 1 < totalQuestions) {
         // Load next question
@@ -230,7 +232,8 @@ export function CodingInterviewPage() {
       } else {
         // End interview and go to feedback
         await endInterview();
-        const finalInterviewId = (interview as any)?._id || interview?.id || interviewId;
+        const interviewData = interview as any;
+        const finalInterviewId = interviewData?._id || interviewData?.id || interviewId;
         navigate(`/feedback/${finalInterviewId}`);
       }
     } catch (error: any) {
@@ -264,41 +267,41 @@ export function CodingInterviewPage() {
   return (
     <div className="min-h-screen py-20 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="px-4 py-2 bg-secondary rounded-lg flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              <span>{formatTime(timeElapsed)}</span>
+        {/* Top Bar - Mobile Responsive */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            <div className="px-3 sm:px-4 py-2 bg-secondary rounded-lg flex items-center gap-2">
+              <Clock className="w-4 sm:w-5 h-4 sm:h-5 text-primary" />
+              <span className="text-sm sm:text-base">{formatTime(timeElapsed)}</span>
             </div>
             {totalTests > 0 && (
-              <div className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+              <div className={`px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 ${
                 testsPassed === totalTests 
                   ? 'bg-green-500/20 border-2 border-green-500' 
                   : 'bg-yellow-500/20 border-2 border-yellow-500'
               }`}>
-                <CheckCircle className={`w-5 h-5 ${testsPassed === totalTests ? 'text-green-400' : 'text-yellow-400'}`} />
-                <span className={testsPassed === totalTests ? 'text-green-400' : 'text-yellow-400'}>
-                  {testsPassed}/{totalTests} Tests Passed
+                <CheckCircle className={`w-4 sm:w-5 h-4 sm:h-5 ${testsPassed === totalTests ? 'text-green-400' : 'text-yellow-400'}`} />
+                <span className={`text-sm sm:text-base ${testsPassed === totalTests ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {testsPassed}/{totalTests} Tests
                 </span>
               </div>
             )}
-            <div className="px-4 py-2 bg-secondary rounded-lg">
-              <span className="text-muted-foreground">Question {questionIndex + 1}</span>
+            <div className="px-3 sm:px-4 py-2 bg-secondary rounded-lg">
+              <span className="text-sm sm:text-base text-muted-foreground">Q {questionIndex + 1}</span>
             </div>
           </div>
-          <Button variant="gradient" onClick={handleSubmit} glow>
+          <Button variant="default" onClick={handleSubmit} className="w-full sm:w-auto bg-gradient-to-r from-primary to-purple-600 hover:opacity-90">
             Submit & Next
             <ArrowRight className="ml-2 w-4 h-4" />
           </Button>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Left Panel - Problem Description */}
-          <div className="space-y-6">
-            <Card glow>
-              <div className="flex items-center justify-between mb-4">
-                <h1 className="text-2xl gradient-text">{problem.title}</h1>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          {/* Left Panel - Problem Description - Mobile Responsive */}
+          <div className="space-y-4 lg:space-y-6">
+            <Card className="p-4 sm:p-6 bg-card border border-border rounded-lg shadow-lg">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mb-4">
+                <h1 className="text-xl sm:text-2xl gradient-text">{problem.title}</h1>
                 <span className={`px-3 py-1 rounded-full text-sm ${
                   problem.difficulty === 'easy' || problem.difficulty === 'Easy' ? 'bg-green-500/20 text-green-400' :
                   problem.difficulty === 'medium' || problem.difficulty === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -308,16 +311,16 @@ export function CodingInterviewPage() {
                 </span>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <h3 className="text-lg mb-2">Description</h3>
-                  <p className="text-muted-foreground whitespace-pre-wrap">{problem.description}</p>
+                  <h3 className="text-base sm:text-lg mb-2">Description</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground whitespace-pre-wrap">{problem.description}</p>
                 </div>
 
                 {problem.examples && problem.examples.length > 0 && (
                   <div>
-                    <h3 className="text-lg mb-2">Examples</h3>
-                    <div className="space-y-3">
+                    <h3 className="text-base sm:text-lg mb-2">Examples</h3>
+                    <div className="space-y-2 sm:space-y-3">
                       {problem.examples.map((example: any, index: number) => (
                         <div key={index} className="bg-secondary rounded-lg p-4">
                           <p className="text-sm mb-1">
@@ -339,7 +342,7 @@ export function CodingInterviewPage() {
 
                 {problem.constraints && problem.constraints.length > 0 && (
                   <div>
-                    <h3 className="text-lg mb-2">Constraints</h3>
+                    <h3 className="text-base sm:text-lg mb-2">Constraints</h3>
                     <ul className="space-y-1">
                       {problem.constraints.map((constraint: string, index: number) => (
                         <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
@@ -361,10 +364,10 @@ export function CodingInterviewPage() {
                   className="flex items-center justify-between w-full"
                 >
                   <div className="flex items-center gap-2">
-                    <Lightbulb className="w-5 h-5 text-yellow-400" />
-                    <h3 className="text-lg">AI Hints</h3>
+                    <Lightbulb className="w-4 sm:w-5 h-4 sm:h-5 text-yellow-400" />
+                    <h3 className="text-base sm:text-lg">AI Hints</h3>
                   </div>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-xs sm:text-sm text-muted-foreground">
                     {showHint ? 'Hide' : 'Show'} hints
                   </span>
                 </button>
@@ -385,17 +388,17 @@ export function CodingInterviewPage() {
             )}
           </div>
 
-          {/* Right Panel - Code Editor */}
-          <div className="space-y-6">
-            <Card glow>
-              <div className="flex items-center justify-between mb-4">
+          {/* Right Panel - Code Editor - Mobile Responsive */}
+          <div className="space-y-4 lg:space-y-6">
+            <Card className="p-4 sm:p-6 bg-card border border-border rounded-lg shadow-lg">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4">
                 <div className="flex items-center gap-2">
-                  <Code className="w-5 h-5 text-primary" />
-                  <h3 className="text-lg">Code Editor</h3>
+                  <Code className="w-4 sm:w-5 h-4 sm:h-5 text-primary" />
+                  <h3 className="text-base sm:text-lg">Code Editor</h3>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <select 
-                    className="px-3 py-1.5 bg-secondary border border-border rounded-lg text-sm"
+                    className="px-3 py-1.5 bg-secondary border border-border rounded-lg text-sm w-full sm:w-auto"
                     value={language}
                     onChange={(e) => handleLanguageChange(e.target.value)}
                   >
@@ -412,23 +415,24 @@ export function CodingInterviewPage() {
 
               <div className="border border-border rounded-lg overflow-hidden">
                 <Editor
-                  height="400px"
+                  height="300px"
                   language={language}
                   value={code}
                   onChange={(value) => setCode(value || '')}
                   theme="vs-dark"
                   options={{
                     minimap: { enabled: false },
-                    fontSize: 14,
+                    fontSize: 13,
                     lineNumbers: 'on',
                     scrollBeyondLastLine: false,
                     wordWrap: 'on',
                     automaticLayout: true,
                   }}
+                  className="sm:h-[400px]"
                 />
               </div>
 
-              <Button variant="gradient" onClick={handleRunCode} className="w-full mt-4" glow disabled={isExecuting}>
+              <Button variant="default" onClick={handleRunCode} className="w-full mt-4 bg-gradient-to-r from-primary to-purple-600 hover:opacity-90" disabled={isExecuting}>
                 {isExecuting ? (
                   <>
                     <Loader2 className="mr-2 w-4 h-4 animate-spin" />
@@ -449,13 +453,13 @@ export function CodingInterviewPage() {
               )}
             </Card>
 
-            {/* Output Console */}
+            {/* Output Console - Mobile Responsive */}
             <Card>
               <div className="flex items-center gap-2 mb-4">
-                <Terminal className="w-5 h-5 text-primary" />
-                <h3 className="text-lg">Output</h3>
+                <Terminal className="w-4 sm:w-5 h-4 sm:h-5 text-primary" />
+                <h3 className="text-base sm:text-lg">Output</h3>
               </div>
-              <div className="bg-[#1e1e1e] rounded-lg p-4 h-64 overflow-y-auto font-mono text-sm">
+              <div className="bg-[#1e1e1e] rounded-lg p-3 sm:p-4 h-48 sm:h-64 overflow-y-auto font-mono text-xs sm:text-sm">
                 {output || (
                   <p className="text-gray-500">Click "Run Code" to see output...</p>
                 )}

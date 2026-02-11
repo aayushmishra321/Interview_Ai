@@ -238,37 +238,38 @@ export function InterviewRoomPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-border px-4 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      {/* Header - Mobile Responsive */}
+      <div className="bg-white border-b border-border px-3 sm:px-4 py-3">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/dashboard')}
+              className="shrink-0"
             >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Exit
+              <ChevronLeft className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Exit</span>
             </Button>
             
-            <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-muted-foreground" />
-              <span className="font-medium">{user?.profile.firstName} {user?.profile.lastName}</span>
+            <div className="flex items-center gap-2 overflow-hidden">
+              <User className="w-4 sm:w-5 h-4 sm:h-5 text-muted-foreground shrink-0" />
+              <span className="font-medium text-sm sm:text-base truncate">{user?.profile.firstName} {user?.profile.lastName}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="w-4 h-4" />
+          <div className="flex items-center gap-3 sm:gap-6 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+              <Clock className="w-3 sm:w-4 h-3 sm:h-4" />
               {formatTime(timeElapsed)}
             </div>
             
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MessageSquare className="w-4 h-4" />
-              Question {currentQuestionIndex} of {currentInterview?.questions?.length || 0}
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+              <MessageSquare className="w-3 sm:w-4 h-3 sm:h-4" />
+              <span className="hidden sm:inline">Question</span> {currentQuestionIndex}/{currentInterview?.questions?.length || 0}
             </div>
 
-            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+            <div className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
               sessionState === 'active' 
                 ? 'bg-green-100 text-green-800' 
                 : sessionState === 'paused'
@@ -281,17 +282,17 @@ export function InterviewRoomPage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-4">
-        <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-120px)]">
-          {/* Left Panel - AI Interviewer */}
-          <div className="lg:col-span-1">
-            <Card className="h-full flex flex-col">
-              <div className="p-4 border-b border-border">
-                <h2 className="text-lg font-semibold">AI Interviewer</h2>
+      {/* Main Content - Mobile Responsive */}
+      <div className="max-w-7xl mx-auto p-3 sm:p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 min-h-[calc(100vh-140px)] lg:h-[calc(100vh-120px)]">
+          {/* Left Panel - AI Interviewer - Mobile Responsive */}
+          <div className="lg:col-span-1 order-1">
+            <Card className="h-full flex flex-col min-h-[400px] lg:min-h-0">
+              <div className="p-3 sm:p-4 border-b border-border">
+                <h2 className="text-base sm:text-lg font-semibold">AI Interviewer</h2>
               </div>
               
-              <div className="flex-1 relative">
+              <div className="flex-1 relative min-h-[250px]">
                 <AIAvatar
                   isListening={isListening}
                   isSpeaking={isAISpeaking}
@@ -300,13 +301,13 @@ export function InterviewRoomPage() {
                 />
               </div>
 
-              {/* Current Question */}
+              {/* Current Question - Mobile Responsive */}
               {currentQuestion && sessionState !== 'setup' && (
-                <div className="p-4 border-t border-border">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="font-medium text-blue-900 mb-2">Current Question:</h3>
-                    <p className="text-blue-800">{currentQuestion.text}</p>
-                    <div className="mt-2 flex items-center gap-2 text-xs text-blue-600">
+                <div className="p-3 sm:p-4 border-t border-border">
+                  <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
+                    <h3 className="font-medium text-sm sm:text-base text-blue-900 mb-2">Current Question:</h3>
+                    <p className="text-sm sm:text-base text-blue-800">{currentQuestion.text}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-blue-600">
                       <span className="px-2 py-1 bg-blue-100 rounded">{currentQuestion.type}</span>
                       <span className="px-2 py-1 bg-blue-100 rounded">{currentQuestion.difficulty}</span>
                       <span className="px-2 py-1 bg-blue-100 rounded">{currentQuestion.expectedDuration} min</span>
@@ -316,10 +317,10 @@ export function InterviewRoomPage() {
               )}
               
               {!currentQuestion && sessionState === 'active' && (
-                <div className="p-4 border-t border-border">
-                  <div className="bg-yellow-50 p-4 rounded-lg text-center">
-                    <p className="text-yellow-800">No more questions available</p>
-                    <Button onClick={handleEndInterview} variant="primary" className="mt-2">
+                <div className="p-3 sm:p-4 border-t border-border">
+                  <div className="bg-yellow-50 p-3 sm:p-4 rounded-lg text-center">
+                    <p className="text-sm sm:text-base text-yellow-800">No more questions available</p>
+                    <Button onClick={handleEndInterview} variant="primary" className="mt-2 w-full sm:w-auto">
                       End Interview
                     </Button>
                   </div>
@@ -328,11 +329,11 @@ export function InterviewRoomPage() {
             </Card>
           </div>
 
-          {/* Center Panel - Video & Controls */}
-          <div className="lg:col-span-1">
-            <div className="space-y-4 h-full flex flex-col">
+          {/* Center Panel - Video & Controls - Mobile Responsive */}
+          <div className="lg:col-span-1 order-3 lg:order-2">
+            <div className="space-y-3 sm:space-y-4 h-full flex flex-col">
               {/* Video Recorder */}
-              <div className="flex-1">
+              <div className="flex-1 min-h-[300px] lg:min-h-0">
                 <VideoRecorder
                   isRecording={isRecording}
                   onStartRecording={startRecording}
@@ -341,16 +342,17 @@ export function InterviewRoomPage() {
                 />
               </div>
 
-              {/* Interview Controls */}
-              <Card className="p-4">
-                <div className="flex items-center justify-center gap-3">
+              {/* Interview Controls - Mobile Responsive */}
+              <Card className="p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 sm:gap-3">
                   {sessionState === 'setup' && (
                     <Button
                       onClick={handleStartInterview}
                       variant="primary"
                       size="lg"
+                      className="w-full sm:w-auto"
                     >
-                      <Play className="w-5 h-5 mr-2" />
+                      <Play className="w-4 sm:w-5 h-4 sm:h-5 mr-2" />
                       Start Interview
                     </Button>
                   )}
@@ -360,6 +362,7 @@ export function InterviewRoomPage() {
                       <Button
                         onClick={() => setSessionState('paused')}
                         variant="outline"
+                        className="flex-1 sm:flex-none"
                       >
                         <Pause className="w-4 h-4" />
                       </Button>
@@ -368,17 +371,21 @@ export function InterviewRoomPage() {
                         onClick={handleNextQuestion}
                         variant="primary"
                         disabled={!currentAnswer.trim()}
+                        className="flex-1 sm:flex-none"
                       >
                         <SkipForward className="w-4 h-4 mr-2" />
-                        Next Question
+                        <span className="hidden sm:inline">Next Question</span>
+                        <span className="sm:hidden">Next</span>
                       </Button>
 
                       <Button
                         onClick={handleEndInterview}
                         variant="destructive"
+                        className="flex-1 sm:flex-none"
                       >
                         <Square className="w-4 h-4 mr-2" />
-                        End Interview
+                        <span className="hidden sm:inline">End Interview</span>
+                        <span className="sm:hidden">End</span>
                       </Button>
                     </>
                   )}
@@ -387,6 +394,7 @@ export function InterviewRoomPage() {
                     <Button
                       onClick={() => setSessionState('active')}
                       variant="primary"
+                      className="w-full sm:w-auto"
                     >
                       <Play className="w-4 h-4 mr-2" />
                       Resume
@@ -397,11 +405,11 @@ export function InterviewRoomPage() {
             </div>
           </div>
 
-          {/* Right Panel - Speech Recognition & Answer */}
-          <div className="lg:col-span-1">
-            <div className="space-y-4 h-full flex flex-col">
+          {/* Right Panel - Speech Recognition & Answer - Mobile Responsive */}
+          <div className="lg:col-span-1 order-2 lg:order-3">
+            <div className="space-y-3 sm:space-y-4 h-full flex flex-col">
               {/* Speech Recognition */}
-              <div className="flex-1">
+              <div className="flex-1 min-h-[250px] lg:min-h-0">
                 <SpeechRecognition
                   isListening={isListening}
                   onStartListening={handleStartListening}
@@ -411,17 +419,17 @@ export function InterviewRoomPage() {
                 />
               </div>
 
-              {/* Answer Input */}
-              <Card className="p-4">
-                <h3 className="font-medium mb-3">Your Answer</h3>
+              {/* Answer Input - Mobile Responsive */}
+              <Card className="p-3 sm:p-4">
+                <h3 className="font-medium text-sm sm:text-base mb-3">Your Answer</h3>
                 <textarea
                   value={currentAnswer}
                   onChange={(e) => setCurrentAnswer(e.target.value)}
                   placeholder="Your answer will appear here as you speak, or you can type directly..."
-                  className="w-full h-32 p-3 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full h-24 sm:h-32 p-2 sm:p-3 text-sm sm:text-base border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
                 />
-                <div className="flex justify-between items-center mt-2 text-sm text-muted-foreground">
-                  <span>{currentAnswer.length} characters</span>
+                <div className="flex justify-between items-center mt-2 text-xs sm:text-sm text-muted-foreground">
+                  <span>{currentAnswer.length} chars</span>
                   <span>{currentAnswer.split(' ').filter(word => word.length > 0).length} words</span>
                 </div>
               </Card>

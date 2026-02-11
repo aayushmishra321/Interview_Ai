@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../Card';
+import { useSocket } from '../../hooks/useSocket';
 
 interface SpeechRecognitionProps {
   isListening: boolean;
@@ -10,6 +11,9 @@ interface SpeechRecognitionProps {
   onTranscript: (transcript: string, isFinal: boolean) => void;
   onSpeechStart?: () => void;
   onSpeechEnd?: () => void;
+  onAnalysis?: (analysis: any) => void;
+  interviewId?: string;
+  enableRealTimeAnalysis?: boolean;
   className?: string;
 }
 
@@ -20,6 +24,9 @@ export function SpeechRecognition({
   onTranscript,
   onSpeechStart,
   onSpeechEnd,
+  onAnalysis,
+  interviewId,
+  enableRealTimeAnalysis = false,
   className,
 }: SpeechRecognitionProps) {
   const [transcript, setTranscript] = useState('');
@@ -33,6 +40,24 @@ export function SpeechRecognition({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const animationRef = useRef<number | null>(null);
+
+  // Socket for real-time analysis
+  const { sendAudioChunk, on, off } = useSocket({ autoConnect: enableRealTimeAnalysis });
+
+  // Listen for audio analysis results
+  useEffect(() => {
+    if (!enableRealTimeAnalysis) return;
+
+    const handleAnalysis = (data: any) => {
+      onAnalysis?.(data);
+    };
+
+    on('audio-analysis', handleAnalysis);
+
+    return () => {
+      off('audio-analysis', handleAnalysis);
+    };
+  }, [enableRealTimeAnalysis, on, off, onAnalysis]);
 
   useEffect(() => {
     // Check if speech recognition is supported
@@ -92,6 +117,15 @@ export function SpeechRecognition({
       if (finalTranscript) {
         setTranscript(prev => prev + finalTranscript);
         onTranscript(finalTranscript, true);
+        
+        // Send for real-time analysis
+        if (enableRealTimeAnalysis && interviewId) {
+          sendAudioChunk({
+            interviewId,
+            audioData: new ArrayBuffer(0), // Placeholder
+            timestamp: Date.now(),
+          });
+        }
       }
 
       setInterimTranscript(interimTranscript);

@@ -1,26 +1,114 @@
+import { useEffect, useState } from 'react';
 import { Users, Video, TrendingUp, AlertTriangle, Activity, Award } from 'lucide-react';
 import { Card } from '../components/ui/card';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import adminService, { PlatformStats, SystemMetrics, AIMetrics, Activity as ActivityType } from '../services/admin';
+import toast from 'react-hot-toast';
 
 export function AdminDashboardPage() {
-  const stats = [
+  const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
+  const [aiMetrics, setAIMetrics] = useState<AIMetrics | null>(null);
+  const [activity, setActivity] = useState<ActivityType[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      console.log('Loading admin dashboard data...');
+      
+      // Load data sequentially to identify which endpoint fails
+      console.log('Fetching stats...');
+      const statsData = await adminService.getStats();
+      console.log('Stats loaded:', statsData);
+      setStats(statsData);
+
+      console.log('Fetching system metrics...');
+      const metricsData = await adminService.getSystemMetrics();
+      console.log('System metrics loaded:', metricsData);
+      setSystemMetrics(metricsData);
+
+      console.log('Fetching AI metrics...');
+      const aiData = await adminService.getAIMetrics();
+      console.log('AI metrics loaded:', aiData);
+      setAIMetrics(aiData);
+
+      console.log('Fetching activity...');
+      const activityData = await adminService.getActivity(20);
+      console.log('Activity loaded:', activityData);
+      setActivity(activityData);
+
+      console.log('✅ All dashboard data loaded successfully');
+    } catch (error: any) {
+      console.error('❌ Failed to load dashboard data:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to load dashboard data';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen py-20 px-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show partial data if some endpoints failed
+  if (!stats && !systemMetrics && !aiMetrics) {
+    return (
+      <div className="min-h-screen py-20 px-4 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+          <h2 className="text-2xl gradient-text mb-2">Unable to Load Dashboard</h2>
+          <p className="text-muted-foreground mb-6">
+            Failed to load admin dashboard data. Please check your connection and try again.
+          </p>
+          <button
+            onClick={loadDashboardData}
+            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const statCards = [
     { 
       label: 'Total Users', 
-      value: '12,547', 
+      value: stats?.users?.total?.toLocaleString() || '0', 
       change: '+23%', 
       icon: Users, 
       color: 'from-indigo-500 to-purple-500' 
     },
     { 
       label: 'Total Interviews', 
-      value: '45,234', 
+      value: stats?.interviews?.total?.toLocaleString() || '0', 
       change: '+18%', 
       icon: Video, 
       color: 'from-purple-500 to-pink-500' 
     },
     { 
       label: 'Avg Success Rate', 
-      value: '87%', 
+      value: `${stats?.interviews?.avgSuccessRate || 0}%`, 
       change: '+5%', 
       icon: TrendingUp, 
       color: 'from-pink-500 to-red-500' 
@@ -34,47 +122,46 @@ export function AdminDashboardPage() {
     }
   ];
 
-  const userGrowthData = [
-    { month: 'Jul', users: 3200 },
-    { month: 'Aug', users: 4100 },
-    { month: 'Sep', users: 5300 },
-    { month: 'Oct', users: 6800 },
-    { month: 'Nov', users: 8900 },
-    { month: 'Dec', users: 10400 },
-    { month: 'Jan', users: 12547 }
-  ];
+  // Transform user growth data for chart
+  const userGrowthData = stats?.users?.growth?.map(item => ({
+    month: new Date(item._id.year, item._id.month - 1).toLocaleDateString('en-US', { month: 'short' }),
+    users: item.count
+  })) || [];
 
-  const interviewTypeData = [
-    { type: 'Technical', count: 15234 },
-    { type: 'HR', count: 12456 },
-    { type: 'Behavioral', count: 9876 },
-    { type: 'Coding', count: 7668 }
-  ];
+  // Transform interview type data for chart
+  const interviewTypeData = stats?.interviews?.byType?.map(item => ({
+    type: item._id.charAt(0).toUpperCase() + item._id.slice(1),
+    count: item.count
+  })) || [];
 
-  const aiPerformanceData = [
-    { metric: 'Accuracy', value: 94 },
-    { metric: 'Response Time', value: 88 },
-    { metric: 'User Satisfaction', value: 92 },
-    { metric: 'Question Quality', value: 89 },
-    { metric: 'Feedback Accuracy', value: 91 }
-  ];
+  const aiPerformanceData = aiMetrics ? [
+    { metric: 'Accuracy', value: aiMetrics.accuracy },
+    { metric: 'Response Time', value: aiMetrics.responseTime },
+    { metric: 'User Satisfaction', value: aiMetrics.userSatisfaction },
+    { metric: 'Question Quality', value: aiMetrics.questionQuality },
+    { metric: 'Feedback Accuracy', value: aiMetrics.feedbackAccuracy }
+  ] : [];
 
-  const recentActivity = [
-    { user: 'john.doe@email.com', action: 'Completed Technical Interview', time: '2 min ago', score: 85 },
-    { user: 'sarah.smith@email.com', action: 'Started Coding Challenge', time: '5 min ago', score: null },
-    { user: 'mike.johnson@email.com', action: 'Uploaded Resume', time: '12 min ago', score: null },
-    { user: 'emma.wilson@email.com', action: 'Downloaded Report', time: '18 min ago', score: 92 },
-    { user: 'alex.brown@email.com', action: 'Completed HR Round', time: '25 min ago', score: 78 }
-  ];
-
-  const systemMetrics = [
+  // Mock system metrics data for chart (in production, fetch historical data)
+  const systemMetricsData = systemMetrics ? [
     { time: '00:00', cpu: 45, memory: 62, requests: 234 },
     { time: '04:00', cpu: 38, memory: 58, requests: 156 },
     { time: '08:00', cpu: 72, memory: 75, requests: 456 },
     { time: '12:00', cpu: 85, memory: 82, requests: 678 },
     { time: '16:00', cpu: 78, memory: 79, requests: 589 },
-    { time: '20:00', cpu: 62, memory: 70, requests: 423 }
-  ];
+    { time: '20:00', cpu: systemMetrics.cpu, memory: systemMetrics.memory, requests: 423 }
+  ] : [];
+
+  const formatTimeAgo = (date: Date) => {
+    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
+    if (seconds < 60) return `${seconds} sec ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+  };
 
   return (
     <div className="min-h-screen py-20 px-4">
@@ -87,7 +174,7 @@ export function AdminDashboardPage() {
 
         {/* Stats Grid - Responsive */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
+          {statCards.map((stat, index) => (
             <Card key={index} className="p-6">
               <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
                 <stat.icon className="w-6 h-6 text-white" />
@@ -213,7 +300,7 @@ export function AdminDashboardPage() {
                 <h3 className="text-xl">System Metrics</h3>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={systemMetrics}>
+                <LineChart data={systemMetricsData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(99, 102, 241, 0.1)" />
                   <XAxis dataKey="time" tick={{ fill: '#a1a1aa', fontSize: 12 }} />
                   <YAxis tick={{ fill: '#a1a1aa', fontSize: 12 }} />
@@ -252,18 +339,18 @@ export function AdminDashboardPage() {
               <h3 className="text-lg">Recent Activity</h3>
             </div>
             <div className="space-y-4 max-h-80 overflow-y-auto">
-              {recentActivity.map((activity, index) => (
+              {activity.map((act, index) => (
                 <div key={index} className="pb-4 border-b border-border last:border-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-sm font-medium truncate">{activity.user}</p>
-                    {activity.score !== null && (
+                    <p className="text-sm font-medium truncate">{act.user}</p>
+                    {act.score !== null && (
                       <span className="text-xs px-2 py-0.5 bg-green-500/20 text-green-400 rounded shrink-0">
-                        {activity.score}%
+                        {act.score}%
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-1">{activity.action}</p>
-                  <p className="text-xs text-muted-foreground">{activity.time}</p>
+                  <p className="text-sm text-muted-foreground mb-1">{act.action}</p>
+                  <p className="text-xs text-muted-foreground">{formatTimeAgo(act.time)}</p>
                 </div>
               ))}
             </div>

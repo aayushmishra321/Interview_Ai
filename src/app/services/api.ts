@@ -7,7 +7,7 @@ class APIService {
   constructor() {
     this.api = axios.create({
       baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001',
-      timeout: 10000,
+      timeout: 60000, // 60 seconds for interview creation (question generation can take time)
       headers: {
         'Content-Type': 'application/json',
       },

@@ -110,8 +110,10 @@ export function InterviewSetupPage() {
         return;
       }
 
-      // MongoDB returns _id, but we need to handle both _id and id
-      const interviewId = (createdInterview as any)._id || createdInterview.id;
+      // Handle both _id (MongoDB) and id formats
+      const interviewId = (createdInterview as any)._id || 
+                         (createdInterview as any).id || 
+                         createdInterview.id;
       
       if (!interviewId) {
         console.error('No interview ID found. Interview object:', createdInterview);
@@ -119,15 +121,17 @@ export function InterviewSetupPage() {
         return;
       }
 
-      console.log('Created interview ID:', interviewId);
+      // Convert ObjectId to string if needed
+      const idString = typeof interviewId === 'object' ? interviewId.toString() : interviewId;
+      console.log('Created interview ID:', idString);
 
       // Navigate based on type with interview ID
       if (selectedType === 'coding') {
-        console.log('Navigating to coding interview with ID:', interviewId);
-        navigate(`/coding-interview?id=${interviewId}`);
+        console.log('Navigating to coding interview with ID:', idString);
+        navigate(`/coding-interview?id=${idString}`);
       } else {
-        console.log('Navigating to interview room with ID:', interviewId);
-        navigate(`/interview-room?id=${interviewId}`);
+        console.log('Navigating to interview room with ID:', idString);
+        navigate(`/interview-room?id=${idString}`);
       }
     } catch (error: any) {
       console.error('=== INTERVIEW CREATION ERROR ===');
