@@ -4,8 +4,8 @@ services:
   # Frontend (React + Vite)
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "5174:5174"
     environment:
@@ -14,7 +14,7 @@ services:
       - VITE_AUTH0_CLIENT_ID=${VITE_AUTH0_CLIENT_ID}
       - VITE_AUTH0_AUDIENCE=${VITE_AUTH0_AUDIENCE}
     volumes:
-      - .:/app
+      - ./frontend:/app
       - /app/node_modules
     depends_on:
       - backend

@@ -17,9 +17,14 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM Check if .env file exists
-if not exist ".env" (
-    echo ❌ .env file not found. Please create it with your API keys
+REM Check if .env files exist
+if not exist "frontend\.env" (
+    echo ❌ frontend\.env file not found. Please create it with your API keys
+    pause
+    exit /b 1
+)
+if not exist "backend\.env" (
+    echo ❌ backend\.env file not found. Please create it with your API keys
     pause
     exit /b 1
 )
@@ -28,12 +33,14 @@ echo ✅ Prerequisites check passed
 
 REM Install frontend dependencies
 echo 📦 Installing frontend dependencies...
+cd frontend
 call npm install
 if %errorlevel% neq 0 (
     echo ❌ Failed to install frontend dependencies
     pause
     exit /b 1
 )
+cd ..
 
 REM Install backend dependencies
 echo 📦 Installing backend dependencies...
@@ -104,7 +111,9 @@ timeout /t 3 /nobreak >nul
 
 REM Start Frontend
 echo 📱 Starting Frontend on port 5174...
+cd frontend
 start "Frontend Server" cmd /k "npm run dev"
+cd ..
 
 echo.
 echo 🎉 Smart Interview AI is starting up!

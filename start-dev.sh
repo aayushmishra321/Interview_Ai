@@ -50,11 +50,11 @@ else
     exit 1
 fi
 
-# Check if .env file exists
-if [ -f ".env" ]; then
-    echo -e "${GREEN}✓ Environment file found${NC}"
+# Check if .env files exist
+if [ -f "frontend/.env" ] && [ -f "backend/.env" ]; then
+    echo -e "${GREEN}✓ Environment files found${NC}"
 else
-    echo -e "${RED}✗ .env file not found. Please create it with your API keys${NC}"
+    echo -e "${RED}✗ .env files not found. Please create them with your API keys${NC}"
     exit 1
 fi
 
@@ -78,6 +78,7 @@ echo -e "${BLUE}Installing dependencies...${NC}"
 
 # Frontend dependencies
 echo -e "${YELLOW}Installing frontend dependencies...${NC}"
+cd frontend
 npm install
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
@@ -85,6 +86,7 @@ else
     echo -e "${RED}✗ Failed to install frontend dependencies${NC}"
     exit 1
 fi
+cd ..
 
 # Backend dependencies
 echo -e "${YELLOW}Installing backend dependencies...${NC}"
@@ -195,7 +197,7 @@ echo -e "${YELLOW}Waiting for backend to be ready...${NC}"
 sleep 3
 
 # Start Frontend
-start_service "Frontend" "npm run dev" "" "5174"
+start_service "Frontend" "npm run dev" "frontend" "5174"
 
 # Wait for frontend to be ready
 echo -e "${YELLOW}Waiting for frontend to be ready...${NC}"

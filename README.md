@@ -89,28 +89,32 @@ cd Interview_Ai
 
 2. **Install Frontend Dependencies**
 ```bash
+cd frontend
 npm install
+cd ..
 ```
 
 3. **Install Backend Dependencies**
 ```bash
 cd backend
 npm install
+cd ..
 ```
 
 4. **Install AI Server Dependencies**
 ```bash
 cd ai-server
 pip install -r requirements.txt
+cd ..
 ```
 
 5. **Configure Environment Variables**
 
-Create `.env` files in root, backend, and ai-server directories:
+Create `.env` files in frontend, backend, and ai-server directories:
 
-**Root `.env`:**
+**Frontend `.env`:**
 ```env
-VITE_API_BASE_URL=http://localhost:5001
+VITE_API_BASE_URL=http://localhost:5001/api
 VITE_APP_NAME=Smart Interview AI
 ```
 
@@ -156,8 +160,20 @@ ENVIRONMENT=development
 
 6. **Start the Services**
 
+**Option 1 - Use Start Script (Recommended):**
+```bash
+# Windows
+start-dev.bat
+
+# Linux/Mac
+./start-dev.sh
+```
+
+**Option 2 - Manual Start:**
+
 **Terminal 1 - Frontend:**
 ```bash
+cd frontend
 npm run dev
 ```
 
@@ -173,12 +189,6 @@ cd ai-server
 python src/main.py
 ```
 
-7. **Create Admin User**
-```bash
-cd backend
-node create-admin-user.js
-```
-
 **Admin Credentials:**
 - Email: `admin@smartinterview.ai`
 - Password: `Admin123!@#`
@@ -189,14 +199,14 @@ node create-admin-user.js
 
 ### For Users
 
-1. **Sign Up** - Create an account at http://localhost:5175/signup
+1. **Sign Up** - Create an account at http://localhost:5174/signup
 2. **Upload Resume** - Go to Resume Analyzer and upload your resume
 3. **Start Interview** - Choose interview type and start practicing
 4. **Get Feedback** - Receive detailed AI-powered feedback
 
 ### For Admins
 
-1. **Admin Login** - Go to http://localhost:5175/admin/login
+1. **Admin Login** - Go to http://localhost:5174/admin/login
 2. **Manage Users** - View, edit, and manage user accounts
 3. **Monitor System** - Check system health and statistics
 4. **View Analytics** - Access platform-wide analytics
@@ -208,28 +218,13 @@ node create-admin-user.js
 ### Run Backend Tests
 ```bash
 cd backend
-
-# Test database connection
-node test-db-connection.js
-
-# Test interview flow
-node test-interview-flow.js
-
-# Test resume endpoints
-node test-resume-endpoints.js
-
-# Test all features
-node test-priority-1-complete.js
-node test-priority-2-complete.js
-node test-priority-3-complete.js
+npm test
 ```
 
-### Test AI Server
-```bash
-cd ai-server
-# AI server will be available at http://localhost:8000
-# Visit http://localhost:8000/health for health check
-```
+### Test Services
+- Frontend: http://localhost:5174
+- Backend: http://localhost:5001/health
+- AI Server: http://localhost:8000/health
 
 ---
 
@@ -237,28 +232,41 @@ cd ai-server
 
 ```
 Interview_Ai/
-├── src/                      # Frontend source
-│   ├── app/
-│   │   ├── components/      # React components
-│   │   ├── pages/           # Page components
-│   │   ├── services/        # API services
-│   │   ├── stores/          # State management
-│   │   └── types/           # TypeScript types
-│   └── styles/              # CSS styles
+├── frontend/                 # Frontend application
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── components/  # React components
+│   │   │   ├── pages/       # Page components
+│   │   │   ├── services/    # API services
+│   │   │   ├── stores/      # State management
+│   │   │   └── types/       # TypeScript types
+│   │   └── styles/          # CSS styles
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.ts
 ├── backend/                  # Backend server
 │   ├── src/
 │   │   ├── middleware/      # Express middleware
 │   │   ├── models/          # MongoDB models
 │   │   ├── routes/          # API routes
 │   │   ├── services/        # Business logic
-│   │   └── utils/           # Utilities
-│   └── logs/                # Application logs
+│   │   ├── utils/           # Utilities
+│   │   └── test/            # Test infrastructure
+│   ├── logs/                # Application logs
+│   ├── package.json
+│   └── tsconfig.json
 ├── ai-server/               # Python AI server
-│   └── src/
-│       ├── models/          # Data models
-│       └── services/        # AI services
-├── guidelines/              # Development guidelines
-└── docs/                    # Documentation
+│   ├── src/
+│   │   ├── models/          # Data models
+│   │   ├── services/        # AI services
+│   │   └── main.py          # Entry point
+│   └── requirements.txt
+├── docker-compose.yml       # Docker configuration
+├── start-dev.bat            # Windows start script
+├── start-dev.sh             # Linux/Mac start script
+├── stop-dev.bat             # Windows stop script
+├── stop-dev.sh              # Linux/Mac stop script
+└── README.md                # This file
 ```
 
 ---
