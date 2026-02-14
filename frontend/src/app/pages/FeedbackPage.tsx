@@ -15,168 +15,313 @@ const printStyles = `
       display: none !important;
     }
     
-    /* Reset page margins */
+    /* Reset page margins and setup */
     @page {
-      margin: 0.75cm;
+      margin: 1.5cm 1.5cm 2cm 1.5cm;
       size: A4 portrait;
     }
     
-    /* Ensure content fits on page */
+    /* Professional SaaS-style layout */
     body {
       print-color-adjust: exact !important;
       -webkit-print-color-adjust: exact !important;
       color-adjust: exact !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+      line-height: 1.7 !important;
     }
     
-    /* Make sure cards and sections are visible */
+    /* Page container - full width usage */
+    .print-container {
+      max-width: 100% !important;
+      width: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    
+    /* Content wrapper - optimal reading width */
+    .max-w-7xl {
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+    
+    /* Section spacing - consistent 8px grid system */
+    .space-y-8 > * + * {
+      margin-top: 24px !important;
+    }
+    
+    /* Print sections - prevent awkward breaks */
     .print-section {
       page-break-inside: avoid;
-      margin-bottom: 20px;
       break-inside: avoid;
+      margin-bottom: 24px;
     }
     
-    /* Ensure charts are visible and properly sized */
+    /* Typography hierarchy */
+    h1 {
+      font-size: 28px !important;
+      line-height: 1.2 !important;
+      font-weight: 700 !important;
+      margin-bottom: 8px !important;
+      color: #111827 !important;
+    }
+    
+    h2 {
+      font-size: 20px !important;
+      line-height: 1.3 !important;
+      font-weight: 600 !important;
+      margin-bottom: 16px !important;
+      color: #1f2937 !important;
+    }
+    
+    h3 {
+      font-size: 18px !important;
+      line-height: 1.4 !important;
+      font-weight: 600 !important;
+      margin-bottom: 12px !important;
+      color: #374151 !important;
+    }
+    
+    p, li, span {
+      font-size: 14px !important;
+      line-height: 1.7 !important;
+      color: #374151 !important;
+    }
+    
+    /* Header section - professional styling */
+    .print-section:first-child {
+      padding-bottom: 16px !important;
+      border-bottom: 2px solid #e5e7eb !important;
+      margin-bottom: 24px !important;
+    }
+    
+    /* Metadata text */
+    .text-muted-foreground {
+      font-size: 13px !important;
+      color: #6b7280 !important;
+      line-height: 1.5 !important;
+    }
+    
+    /* Cards - consistent styling */
+    .bg-card, [class*="bg-card"] {
+      background-color: #ffffff !important;
+      border: 1px solid #e5e7eb !important;
+      border-radius: 8px !important;
+      padding: 20px !important;
+      box-shadow: none !important;
+    }
+    
+    /* Grid layouts - balanced */
+    .grid {
+      display: grid !important;
+      gap: 20px !important;
+    }
+    
+    .lg\\:grid-cols-2 {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .grid-cols-2 {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .md\\:grid-cols-2 {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    /* Flex layouts */
+    .flex {
+      display: flex !important;
+    }
+    
+    .flex-col {
+      flex-direction: column !important;
+    }
+    
+    .md\\:flex-row {
+      flex-direction: row !important;
+    }
+    
+    /* Charts - proper sizing */
     svg {
       max-width: 100% !important;
       height: auto !important;
     }
     
-    /* Better spacing for print */
-    .print-container {
-      max-width: 100% !important;
+    .recharts-wrapper {
+      width: 100% !important;
+      height: 250px !important;
+    }
+    
+    /* Circular progress - centered */
+    .relative.inline-block {
+      display: inline-block !important;
+      margin: 0 auto !important;
+    }
+    
+    /* Lists - proper spacing */
+    ul {
+      list-style: none !important;
       padding: 0 !important;
       margin: 0 !important;
     }
     
-    /* Keep original colors and backgrounds */
+    ul.space-y-3 > li {
+      margin-top: 12px !important;
+      margin-bottom: 12px !important;
+    }
+    
+    ul.space-y-3 > li:first-child {
+      margin-top: 0 !important;
+    }
+    
+    /* List items - structured format */
+    li {
+      display: flex !important;
+      align-items: flex-start !important;
+      gap: 12px !important;
+      line-height: 1.6 !important;
+    }
+    
+    /* Icons - consistent sizing */
+    svg.lucide {
+      width: 20px !important;
+      height: 20px !important;
+      flex-shrink: 0 !important;
+    }
+    
+    /* Recommendation cards - no duplication */
+    .bg-secondary {
+      background-color: #f9fafb !important;
+      border: 1px solid #e5e7eb !important;
+      border-radius: 6px !important;
+      padding: 16px !important;
+      margin-bottom: 12px !important;
+    }
+    
+    /* Priority badges */
+    .px-2.py-0\\.5 {
+      padding: 4px 12px !important;
+      border-radius: 12px !important;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.5px !important;
+    }
+    
+    /* Gradient text - visible */
+    .gradient-text {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      background-clip: text !important;
+      font-weight: 700 !important;
+    }
+    
+    /* Color preservation */
     * {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
       color-adjust: exact !important;
     }
     
-    /* Ensure text is visible */
-    h1, h2, h3, h4, h5, h6, p, span, div, li {
-      color: #000 !important;
-      opacity: 1 !important;
-    }
-    
-    /* Keep card backgrounds visible */
-    .bg-card, [class*="bg-"] {
-      background-color: #ffffff !important;
-      border: 1px solid #e5e7eb !important;
-    }
-    
-    /* Ensure borders are visible */
+    /* Borders */
     .border, [class*="border-"] {
-      border-color: #d1d5db !important;
+      border-color: #e5e7eb !important;
     }
     
-    /* Make gradient text visible */
-    .gradient-text {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%) !important;
-      -webkit-background-clip: text !important;
-      -webkit-text-fill-color: transparent !important;
-      background-clip: text !important;
+    /* Section dividers */
+    .print-section + .print-section {
+      border-top: 1px solid #f3f4f6 !important;
+      padding-top: 24px !important;
     }
     
-    /* Ensure colored elements are visible */
-    .text-primary, .text-green-400, .text-yellow-400, .text-blue-400, .text-purple-400, .text-pink-400 {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
+    /* Remove excessive padding */
+    .py-20 {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
     }
     
-    /* Page breaks */
-    .page-break {
-      page-break-after: always;
+    .px-4 {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
     
-    /* Optimize spacing */
-    .space-y-8 > * + * {
-      margin-top: 1.5rem !important;
-    }
-    
-    /* Make sure content is not hidden */
-    .min-h-screen {
-      min-height: auto !important;
-    }
-    
-    /* Ensure proper sizing */
-    .max-w-7xl {
+    /* Ensure full width content */
+    .container, .max-w-7xl {
+      width: 100% !important;
       max-width: 100% !important;
     }
     
-    /* Fix chart containers */
-    .recharts-wrapper {
-      width: 100% !important;
-      height: auto !important;
-    }
-    
-    /* Fix grid layouts for print */
-    .grid {
-      display: grid !important;
-    }
-    
-    .lg\\:grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-    
-    .grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-    
-    /* Fix flex layouts */
-    .flex {
-      display: flex !important;
-    }
-    
-    /* Ensure proper card padding */
-    .p-6, .p-4 {
-      padding: 1rem !important;
-    }
-    
-    /* Fix text sizes for print */
-    .text-4xl {
-      font-size: 2rem !important;
-      line-height: 1.2 !important;
-    }
-    
-    .text-xl {
-      font-size: 1.25rem !important;
-      line-height: 1.4 !important;
-    }
-    
-    /* Ensure icons are visible */
-    svg.lucide {
-      width: 1.25rem !important;
-      height: 1.25rem !important;
-    }
-    
-    /* Fix circular progress */
-    .relative.inline-block {
-      display: inline-block !important;
-    }
-    
-    /* Ensure proper spacing in lists */
-    ul.space-y-3 > li {
-      margin-top: 0.75rem !important;
-    }
-    
-    /* Fix recommendation cards */
-    .bg-secondary {
-      background-color: #f3f4f6 !important;
-      border: 1px solid #e5e7eb !important;
-    }
-    
-    /* Ensure all content is visible */
+    /* Fix overflow issues */
     .overflow-hidden {
       overflow: visible !important;
     }
     
-    /* Fix responsive containers */
-    .container {
-      width: 100% !important;
-      max-width: 100% !important;
+    /* Optimize text wrapping */
+    p, li, span {
+      word-wrap: break-word !important;
+      overflow-wrap: break-word !important;
+      hyphens: auto !important;
+    }
+    
+    /* Remove min-height constraints */
+    .min-h-screen {
+      min-height: auto !important;
+    }
+    
+    /* Page numbers (optional - can be added via CSS) */
+    @page {
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-size: 10px;
+        color: #9ca3af;
+      }
+    }
+    
+    /* Ensure proper spacing between major sections */
+    .print-section:nth-child(2) {
+      margin-top: 0 !important;
+    }
+    
+    /* Fix chart labels */
+    .recharts-text {
+      font-size: 12px !important;
+    }
+    
+    /* Ensure proper card heights in grids */
+    .grid > * {
+      height: auto !important;
+      min-height: 0 !important;
+    }
+    
+    /* Fix responsive text sizes */
+    .text-4xl {
+      font-size: 28px !important;
+    }
+    
+    .text-xl {
+      font-size: 18px !important;
+    }
+    
+    .text-lg {
+      font-size: 16px !important;
+    }
+    
+    .text-sm {
+      font-size: 13px !important;
+    }
+    
+    .text-xs {
+      font-size: 11px !important;
+    }
+    
+    /* Ensure proper line heights */
+    * {
+      line-height: 1.6 !important;
+    }
+    
+    h1, h2, h3 {
+      line-height: 1.3 !important;
     }
   }
 `;
