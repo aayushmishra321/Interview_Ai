@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface IResume extends Document {
   userId: mongoose.Types.ObjectId;
@@ -41,6 +41,17 @@ export interface IResume extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+  // Virtual
+  fileExtension?: string;
+  // Methods
+  isAnalysisComplete(): boolean;
+  getAnalysisAge(): number | null;
+}
+
+// Model interface with static methods
+export interface IResumeModel extends Model<IResume> {
+  getLatestByUser(userId: mongoose.Types.ObjectId): Promise<IResume | null>;
+  getPendingAnalysis(): Promise<IResume[]>;
 }
 
 const resumeSchema = new Schema<IResume>({
@@ -205,4 +216,4 @@ resumeSchema.statics.getPendingAnalysis = function() {
   }).sort({ createdAt: 1 });
 };
 
-export default mongoose.model<IResume>('Resume', resumeSchema);
+export default mongoose.model<IResume, IResumeModel>('Resume', resumeSchema);

@@ -50,23 +50,23 @@ export interface Activity {
 
 export const adminService = {
   async getStats(): Promise<PlatformStats> {
-    const response = await api.get('/admin/stats');
-    return response.data.data;
+    const response = await api.get('/api/admin/stats');
+    return response.data;
   },
 
   async getSystemMetrics(): Promise<SystemMetrics> {
-    const response = await api.get('/admin/system-metrics');
-    return response.data.data;
+    const response = await api.get('/api/admin/system-metrics');
+    return response.data;
   },
 
   async getAIMetrics(): Promise<AIMetrics> {
-    const response = await api.get('/admin/ai-metrics');
-    return response.data.data;
+    const response = await api.get('/api/admin/ai-metrics');
+    return response.data;
   },
 
   async getActivity(limit: number = 20): Promise<Activity[]> {
-    const response = await api.get(`/admin/activity?limit=${limit}`);
-    return response.data.data;
+    const response = await api.get(`/api/admin/activity?limit=${limit}`);
+    return response.data;
   },
 
   async getUsers(page: number = 1, limit: number = 20, search?: string, plan?: string) {
@@ -78,7 +78,7 @@ export const adminService = {
     if (search) params.append('search', search);
     if (plan) params.append('plan', plan);
 
-    const response = await api.get(`/admin/users?${params.toString()}`);
+    const response = await api.get(`/api/admin/users?${params.toString()}`);
     return response.data;
   },
 
@@ -91,17 +91,17 @@ export const adminService = {
     if (status) params.append('status', status);
     if (type) params.append('type', type);
 
-    const response = await api.get(`/admin/interviews?${params.toString()}`);
+    const response = await api.get(`/api/admin/interviews?${params.toString()}`);
     return response.data;
   },
 
   async updateUser(userId: string, updates: any) {
-    const response = await api.put(`/admin/users/${userId}`, updates);
+    const response = await api.put(`/api/admin/users/${userId}`, updates);
     return response.data;
   },
 
   async deleteUser(userId: string) {
-    const response = await api.delete(`/admin/users/${userId}`);
+    const response = await api.delete(`/api/admin/users/${userId}`);
     return response.data;
   },
 };

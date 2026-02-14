@@ -1,7 +1,6 @@
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { asyncHandler } from '../middleware/errorHandler';
-import { requireAdmin } from '../middleware/auth';
 import User from '../models/User';
 import Interview from '../models/Interview';
 import Resume from '../models/Resume';
@@ -10,8 +9,8 @@ import os from 'os';
 
 const router = express.Router();
 
-// All admin routes require admin authentication
-router.use(requireAdmin);
+// NOTE: requireAdmin middleware is applied when mounting this router in app.ts
+// This allows for easier testing
 
 // Get platform statistics
 router.get('/stats', asyncHandler(async (req: Request, res: Response) => {
@@ -383,6 +382,221 @@ router.get('/ai-metrics', asyncHandler(async (_req: Request, res: Response) => {
       totalAnalyzed: completedInterviews.length
     }
   });
+}));
+
+// ==================== RESUME MANAGEMENT ====================
+
+// Get all resumes (paginated)
+router.get('/resumes', asyncHandler(async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  const search = req.query.search as string;
+
+  const query: any = {};
+  
+  if (search) {
+    query.filename = { $regex: search, $options: 'i' };
+  }
+
+  const resumes = await Resume.find(query)
+    .populate('userId', 'email profile.firstName profile.lastName')
+    .sort({ uploadDate: -1 })
+    .limit(limit)
+    .skip((page - 1) * limit);
+
+  const total = await Resume.countDocuments(query);
+
+  res.json({
+    success: true,
+    data: resumes,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  });
+}));
+
+// Get specific resume
+router.get('/resumes/:id', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const resume = await Resume.findById(req.params.id)
+    .populate('userId', 'email profile.firstName profile.lastName');
+  
+  if (!resume) {
+    res.status(404).json({
+      success: false,
+      error: 'Resume not found'
+    });
+    return;
+  }
+
+  res.json({
+    success: true,
+    data: resume
+  });
+}));
+
+// Delete resume
+router.delete('/resumes/:id', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const resume = await Resume.findById(req.params.id);
+  
+  if (!resume) {
+    res.status(404).json({
+      success: false,
+      error: 'Resume not found'
+    });
+    return;
+  }
+
+  await Resume.findByIdAndDelete(req.params.id);
+
+  logger.info(`Admin deleted resume: ${resume.filename}`);
+
+  res.json({
+    success: true,
+    message: 'Resume deleted successfully'
+  });
+}));
+
+// ==================== INTERVIEW DETAIL MANAGEMENT ====================
+
+// Get specific interview
+router.get('/interviews/:id', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const interview = await Interview.findById(req.params.id)
+    .populate('userId', 'email profile.firstName profile.lastName');
+  
+  if (!interview) {
+    res.status(404).json({
+      success: false,
+      error: 'Interview not found'
+    });
+    return;
+  }
+
+  res.json({
+    success: true,
+    data: interview
+  });
+}));
+
+// Update interview
+router.put('/interviews/:id', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { status, type } = req.body;
+  
+  const interview = await Interview.findById(req.params.id);
+  
+  if (!interview) {
+    res.status(404).json({
+      success: false,
+      error: 'Interview not found'
+    });
+    return;
+  }
+
+  if (status) interview.status = status;
+  if (type) interview.type = type;
+
+  await interview.save();
+
+  logger.info(`Admin updated interview: ${interview._id}`);
+
+  res.json({
+    success: true,
+    data: interview,
+    message: 'Interview updated successfully'
+  });
+}));
+
+// Delete interview
+router.delete('/interviews/:id', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const interview = await Interview.findById(req.params.id);
+  
+  if (!interview) {
+    res.status(404).json({
+      success: false,
+      error: 'Interview not found'
+    });
+    return;
+  }
+
+  await Interview.findByIdAndDelete(req.params.id);
+
+  logger.info(`Admin deleted interview: ${interview._id}`);
+
+  res.json({
+    success: true,
+    message: 'Interview deleted successfully'
+  });
+}));
+
+// ==================== BULK OPERATIONS ====================
+
+// Bulk delete users
+router.post('/users/bulk-delete', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { userIds } = req.body;
+
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    res.status(400).json({
+      success: false,
+      error: 'userIds array is required'
+    });
+    return;
+  }
+
+  // Delete users' interviews
+  await Interview.deleteMany({ userId: { $in: userIds } });
+  
+  // Delete users' resumes
+  await Resume.deleteMany({ userId: { $in: userIds } });
+  
+  // Delete users
+  const result = await User.deleteMany({ _id: { $in: userIds } });
+
+  logger.info(`Admin bulk deleted ${result.deletedCount} users`);
+
+  res.json({
+    success: true,
+    message: `Successfully deleted ${result.deletedCount} users and their associated data`
+  });
+}));
+
+// ==================== EXPORT FEATURES ====================
+
+// Export users to CSV
+router.get('/export/users', asyncHandler(async (req: Request, res: Response) => {
+  const users = await User.find().select('-password').lean();
+
+  // Convert to CSV format
+  const csvHeader = 'Email,First Name,Last Name,Role,Plan,Status,Created At\n';
+  const csvRows = users.map(user => 
+    `${user.email},${user.profile.firstName},${user.profile.lastName},${user.auth.role || 'user'},${user.subscription.plan},${user.subscription.status},${user.createdAt}`
+  ).join('\n');
+
+  const csv = csvHeader + csvRows;
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename=users.csv');
+  res.send(csv);
+}));
+
+// Export interviews to CSV
+router.get('/export/interviews', asyncHandler(async (req: Request, res: Response) => {
+  const interviews = await Interview.find()
+    .populate('userId', 'email')
+    .lean();
+
+  // Convert to CSV format
+  const csvHeader = 'User Email,Type,Status,Score,Created At\n';
+  const csvRows = interviews.map(interview => 
+    `${(interview.userId as any)?.email || 'Unknown'},${interview.type},${interview.status},${interview.analysis?.overallScore || 'N/A'},${interview.createdAt}`
+  ).join('\n');
+
+  const csv = csvHeader + csvRows;
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename=interviews.csv');
+  res.send(csv);
 }));
 
 export default router;

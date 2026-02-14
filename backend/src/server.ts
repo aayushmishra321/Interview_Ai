@@ -1,43 +1,18 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import compression from 'compression';
-import rateLimit from 'express-rate-limit';
+// Load environment variables FIRST before any other imports
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
-
-// Import routes
-import authRoutes from './routes/auth';
-import userRoutes from './routes/user';
-import resumeRoutes from './routes/resume';
-import interviewRoutes from './routes/interview';
-import feedbackRoutes from './routes/feedback';
-import adminRoutes from './routes/admin';
-import codeExecutionRoutes from './routes/codeExecution';
-import paymentRoutes from './routes/payment';
-import practiceRoutes from './routes/practice';
-import schedulingRoutes from './routes/scheduling';
-
-// Import middleware
-import { errorHandler } from './middleware/errorHandler';
-import { notFound } from './middleware/notFound';
-import { authenticateToken } from './middleware/auth';
-import { apiLimiter, authLimiter, passwordResetLimiter, uploadLimiter } from './middleware/rateLimiter';
-import { sanitizeData, xssProtection, validateInput } from './middleware/sanitizer';
-
-// Import services
+import { createApp } from './app';
 import { initializeRedis } from './services/redis';
 import { initializeCloudinary } from './services/cloudinary';
 import { setupSocketHandlers } from './services/socket';
 import logger from './utils/logger';
 
-const app = express();
+// Create Express app
+const app = createApp();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
@@ -47,9 +22,8 @@ const io = new Server(server, {
   },
 });
 
-const PORT = parseInt(process.env.PORT || '5001', 10); // Backend server port
+const PORT = parseInt(process.env.PORT || '5001', 10);
 
-// Check if port is available before starting
 const checkPort = (port: number): Promise<boolean> => {
   return new Promise((resolve) => {
     const server = require('net').createServer();
@@ -62,154 +36,6 @@ const checkPort = (port: number): Promise<boolean> => {
     });
   });
 };
-
-// Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
-}));
-
-// CORS configuration - Allow requests from frontend
-const corsOptions = {
-  origin: function (origin: string | undefined, callback: Function) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'http://localhost:5175',
-      'http://localhost:5174',
-      'http://localhost:3000',
-      process.env.FRONTEND_URL
-    ].filter(Boolean);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 600 // Cache preflight request for 10 minutes
-};
-
-app.use(cors(corsOptions));
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-  },
-});
-
-app.use('/api/', limiter);
-
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Security middleware - Sanitization
-app.use(sanitizeData); // MongoDB injection protection
-app.use(xssProtection); // XSS protection
-app.use(validateInput); // Input validation
-
-// Serve uploaded files
-app.use('/uploads', express.static('uploads'));
-
-// Compression middleware
-app.use(compression());
-
-// Logging middleware
-app.use(morgan('combined', {
-  stream: {
-    write: (message: string) => logger.info(message.trim()),
-  },
-}));
-
-// Health check endpoint - Enhanced with detailed logging
-app.get('/health', (req, res) => {
-  const healthCheck = {
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    port: PORT,
-    services: {
-      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-      server: 'running',
-    },
-  };
-  
-  console.log('✅ Health check requested:', healthCheck);
-  res.status(200).json(healthCheck);
-});
-
-// API health check with more details
-app.get('/api/health', (req, res) => {
-  const healthCheck = {
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    port: PORT,
-    services: {
-      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-      email: process.env.EMAIL_USER ? 'configured' : 'not configured',
-      stripe: process.env.STRIPE_SECRET_KEY ? 'configured' : 'not configured',
-      cloudinary: process.env.CLOUDINARY_CLOUD_NAME ? 'configured' : 'not configured',
-    },
-  };
-  
-  console.log('✅ API health check requested:', healthCheck);
-  res.status(200).json(healthCheck);
-});
-
-// Cloudinary health check endpoint
-app.get('/api/health/cloudinary', async (req, res) => {
-  try {
-    const cloudinaryService = require('./services/cloudinary').default;
-    const result = await cloudinaryService.testConnection();
-    
-    res.status(result.success ? 200 : 503).json({
-      service: 'Cloudinary',
-      ...result,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error: any) {
-    res.status(503).json({
-      service: 'Cloudinary',
-      success: false,
-      message: error.message,
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-// API routes with specific rate limiters
-app.use('/api/auth', authLimiter, authRoutes); // Strict rate limiting for auth
-app.use('/api/user', apiLimiter, authenticateToken, userRoutes);
-app.use('/api/resume', uploadLimiter, authenticateToken, resumeRoutes); // Upload rate limiting
-app.use('/api/interview', apiLimiter, authenticateToken, interviewRoutes);
-app.use('/api/feedback', apiLimiter, authenticateToken, feedbackRoutes);
-app.use('/api/admin', apiLimiter, authenticateToken, adminRoutes);
-app.use('/api/code', apiLimiter, codeExecutionRoutes);
-app.use('/api/payment', apiLimiter, paymentRoutes);
-app.use('/api/practice', apiLimiter, authenticateToken, practiceRoutes);
-app.use('/api/scheduling', apiLimiter, authenticateToken, schedulingRoutes);
-
-// Error handling middleware
-app.use(notFound);
-app.use(errorHandler);
 
 // Database connection with improved error handling
 const connectDB = async () => {
