@@ -17,49 +17,73 @@ const printStyles = `
     
     /* Reset page margins */
     @page {
-      margin: 1cm;
-      size: A4;
+      margin: 0.5cm;
+      size: A4 portrait;
     }
     
     /* Ensure content fits on page */
     body {
-      print-color-adjust: exact;
-      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact !important;
+      -webkit-print-color-adjust: exact !important;
+      color-adjust: exact !important;
     }
     
     /* Make sure cards and sections are visible */
     .print-section {
       page-break-inside: avoid;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
+      break-inside: avoid;
     }
     
     /* Ensure charts are visible */
     svg {
-      max-width: 100%;
-      height: auto;
+      max-width: 100% !important;
+      height: auto !important;
     }
     
     /* Better spacing for print */
     .print-container {
       max-width: 100% !important;
-      padding: 0 !important;
+      padding: 10px !important;
+      margin: 0 !important;
     }
     
-    /* Ensure text is readable */
+    /* Keep original colors and backgrounds */
     * {
-      color: #000 !important;
-      background: #fff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
     }
     
-    /* Keep gradients and colors for important elements */
-    .gradient-text, .text-primary, [class*="text-"] {
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+    /* Ensure text is visible */
+    h1, h2, h3, h4, h5, h6, p, span, div, li {
+      color: #000 !important;
+      opacity: 1 !important;
+    }
+    
+    /* Keep card backgrounds visible */
+    .bg-card, [class*="bg-"] {
+      background-color: #ffffff !important;
+      border: 1px solid #e5e7eb !important;
     }
     
     /* Ensure borders are visible */
     .border, [class*="border-"] {
-      border-color: #e5e7eb !important;
+      border-color: #d1d5db !important;
+    }
+    
+    /* Make gradient text visible */
+    .gradient-text {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      background-clip: text !important;
+    }
+    
+    /* Ensure colored elements are visible */
+    .text-primary, .text-green-400, .text-yellow-400, .text-blue-400, .text-purple-400, .text-pink-400 {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     
     /* Page breaks */
@@ -67,9 +91,25 @@ const printStyles = `
       page-break-after: always;
     }
     
-    /* Hide shadows in print */
-    * {
-      box-shadow: none !important;
+    /* Reduce excessive spacing */
+    .space-y-8 > * + * {
+      margin-top: 1rem !important;
+    }
+    
+    /* Make sure content is not hidden */
+    .min-h-screen {
+      min-height: auto !important;
+    }
+    
+    /* Ensure proper sizing */
+    .max-w-7xl {
+      max-width: 100% !important;
+    }
+    
+    /* Fix chart containers */
+    .recharts-wrapper {
+      width: 100% !important;
+      height: auto !important;
     }
   }
 `;
