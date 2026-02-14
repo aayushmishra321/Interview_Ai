@@ -35,7 +35,6 @@ describe('Payment Routes', () => {
         .post('/api/payment/create-checkout-session')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          priceId: 'price_test123',
           plan: 'pro',
         });
 
@@ -49,7 +48,7 @@ describe('Payment Routes', () => {
       }
     });
 
-    it('should require priceId and plan', async () => {
+    it('should require plan', async () => {
       const response = await request(app)
         .post('/api/payment/create-checkout-session')
         .set('Authorization', `Bearer ${authToken}`)

@@ -13,7 +13,7 @@ const router = express.Router();
  */
 router.post('/create-checkout-session', authenticateToken, asyncHandler(async (req, res) => {
   const userId = req.user?.userId;
-  const { priceId, plan } = req.body;
+  const { plan } = req.body;
 
   if (!userId) {
     return res.status(401).json({
@@ -22,10 +22,10 @@ router.post('/create-checkout-session', authenticateToken, asyncHandler(async (r
     });
   }
 
-  if (!priceId || !plan) {
+  if (!plan || !['pro', 'enterprise'].includes(plan)) {
     return res.status(400).json({
       success: false,
-      error: 'Price ID and plan are required',
+      error: 'Valid plan (pro or enterprise) is required',
     });
   }
 
@@ -73,9 +73,9 @@ router.post('/create-checkout-session', authenticateToken, asyncHandler(async (r
     // Create checkout session
     const session = await stripeService.createCheckoutSession({
       customerId,
-      priceId,
+      plan: plan as 'pro' | 'enterprise',
       successUrl: `${process.env.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${process.env.FRONTEND_URL}/payment/cancel`,
+      cancelUrl: `${process.env.FRONTEND_URL}/subscription`,
       metadata: {
         userId: user._id.toString(),
         plan,
@@ -352,6 +352,7 @@ router.get('/plans', asyncHandler(async (req, res) => {
       id: 'free',
       name: 'Free',
       price: 0,
+      currency: 'INR',
       interval: 'month',
       features: [
         '5 interviews per month',
@@ -364,7 +365,8 @@ router.get('/plans', asyncHandler(async (req, res) => {
     {
       id: 'pro',
       name: 'Pro',
-      price: 29,
+      price: 2499,
+      currency: 'INR',
       interval: 'month',
       features: [
         'Unlimited interviews',
@@ -374,12 +376,13 @@ router.get('/plans', asyncHandler(async (req, res) => {
         'Priority support',
         'Interview history',
       ],
-      priceId: process.env.STRIPE_PRO_PRICE_ID,
+      priceId: null, // Using dynamic pricing
     },
     {
       id: 'enterprise',
       name: 'Enterprise',
-      price: 99,
+      price: 8499,
+      currency: 'INR',
       interval: 'month',
       features: [
         'Everything in Pro',
@@ -389,7 +392,7 @@ router.get('/plans', asyncHandler(async (req, res) => {
         'Dedicated support',
         'Custom integrations',
       ],
-      priceId: process.env.STRIPE_ENTERPRISE_PRICE_ID,
+      priceId: null, // Using dynamic pricing
     },
   ];
 

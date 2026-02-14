@@ -41,25 +41,25 @@ export function SubscriptionPage() {
     }
   };
 
-  const handleUpgrade = async (priceId: string, planId: string) => {
-    if (!priceId) {
-      toast.error('This plan is not available yet');
+  const handleUpgrade = async (planId: string) => {
+    if (planId === 'free') {
+      toast.info('You are already on the free plan');
       return;
     }
 
     setLoading(true);
     try {
       const response = await apiService.post('/api/payment/create-checkout-session', {
-        priceId,
         plan: planId,
       });
 
       if (response.success && response.data.url) {
         window.location.href = response.data.url;
       } else {
-        toast.error('Failed to create checkout session');
+        toast.error(response.error || 'Failed to create checkout session');
       }
     } catch (error: any) {
+      console.error('Payment error:', error);
       toast.error(error.message || 'Failed to process payment');
     } finally {
       setLoading(false);
@@ -132,7 +132,7 @@ export function SubscriptionPage() {
                 <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
                 <div className="flex items-baseline justify-center gap-1">
                   <span className="text-5xl font-bold gradient-text">
-                    ${plan.price}
+                    ₹{plan.price.toLocaleString('en-IN')}
                   </span>
                   <span className="text-muted-foreground">/{plan.interval}</span>
                 </div>
@@ -156,7 +156,7 @@ export function SubscriptionPage() {
                   } else if (plan.id === 'free') {
                     toast.info('You are already on the free plan');
                   } else {
-                    handleUpgrade(plan.priceId, plan.id);
+                    handleUpgrade(plan.id);
                   }
                 }}
                 disabled={loading}

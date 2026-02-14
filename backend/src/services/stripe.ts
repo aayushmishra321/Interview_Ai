@@ -66,7 +66,8 @@ class StripeService {
    */
   async createCheckoutSession(data: {
     customerId: string;
-    priceId: string;
+    priceId?: string;
+    plan: 'pro' | 'enterprise';
     successUrl: string;
     cancelUrl: string;
     metadata?: Record<string, string>;
@@ -77,12 +78,41 @@ class StripeService {
     }
 
     try {
+      // Define pricing in INR (Indian Rupees)
+      const pricing = {
+        pro: {
+          amount: 2499, // ₹2,499 per month (approximately $29)
+          currency: 'inr',
+          name: 'Pro Plan',
+          description: 'Unlimited interviews with advanced AI feedback',
+        },
+        enterprise: {
+          amount: 8499, // ₹8,499 per month (approximately $99)
+          currency: 'inr',
+          name: 'Enterprise Plan',
+          description: 'Everything in Pro plus team management and API access',
+        },
+      };
+
+      const planPricing = pricing[data.plan];
+
+      // Create checkout session with dynamic pricing
       const session = await this.stripe.checkout.sessions.create({
         customer: data.customerId,
         payment_method_types: ['card'],
         line_items: [
           {
-            price: data.priceId,
+            price_data: {
+              currency: planPricing.currency,
+              product_data: {
+                name: planPricing.name,
+                description: planPricing.description,
+              },
+              unit_amount: planPricing.amount,
+              recurring: {
+                interval: 'month',
+              },
+            },
             quantity: 1,
           },
         ],
