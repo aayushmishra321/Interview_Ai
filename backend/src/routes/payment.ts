@@ -397,9 +397,24 @@ router.get('/verify-session/:sessionId', authenticateToken, asyncHandler(async (
         if (session.subscription) {
           user.subscription.stripeSubscriptionId = session.subscription as string;
           
-          // Get subscription details for expiry date
-          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-          user.subscription.expiresAt = new Date((subscription as any).current_period_end * 1000);
+          try {
+            // Get subscription details for expiry date
+            const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+            if ((subscription as any).current_period_end) {
+              user.subscription.expiresAt = new Date((subscription as any).current_period_end * 1000);
+            }
+          } catch (subError) {
+            logger.warn('Could not retrieve subscription details:', subError);
+            // Set default expiry to 1 month from now
+            const oneMonthFromNow = new Date();
+            oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+            user.subscription.expiresAt = oneMonthFromNow;
+          }
+        } else {
+          // No subscription ID (one-time payment), set default expiry to 1 month
+          const oneMonthFromNow = new Date();
+          oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+          user.subscription.expiresAt = oneMonthFromNow;
         }
         
         await user.save();
