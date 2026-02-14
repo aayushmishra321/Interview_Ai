@@ -196,7 +196,7 @@ export function HistoryPage() {
                         <Button 
                           variant="default"
                           size="sm"
-                          onClick={() => navigate(`/feedback?id=${interviewId}`)}
+                          onClick={() => navigate(`/feedback/${interviewId}`)}
                         >
                           <Eye className="w-4 h-4 mr-2" />
                           View Feedback
