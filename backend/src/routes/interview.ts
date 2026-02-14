@@ -801,6 +801,55 @@ router.get('/:id/feedback', asyncHandler(async (req, res) => {
   }
 }));
 
+// Generate PDF report
+router.post('/:id/report', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const interview = await Interview.findOne({
+      _id: id,
+      userId: req.user!.userId,
+    });
+
+    if (!interview) {
+      return res.status(404).json({
+        success: false,
+        error: 'Interview not found',
+      });
+    }
+
+    // Check if feedback exists
+    if (!interview.feedback || !interview.feedback.overallRating) {
+      return res.status(400).json({
+        success: false,
+        error: 'Feedback not generated yet',
+        message: 'Please generate feedback before downloading the report',
+      });
+    }
+
+    // For now, return a placeholder URL
+    // TODO: Implement actual PDF generation using a library like puppeteer or pdfkit
+    const reportUrl = `${process.env.FRONTEND_URL}/feedback/${id}`;
+
+    logger.info(`Report generated for interview ${id}`);
+
+    res.json({
+      success: true,
+      data: {
+        reportUrl,
+        message: 'Report generated successfully. You can print this page as PDF.',
+      },
+    });
+  } catch (error: any) {
+    logger.error('Generate report error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate report',
+      message: error.message,
+    });
+  }
+}));
+
 // Real-time video analysis
 router.post('/:interviewId/analyze/video', asyncHandler(async (req, res) => {
   const { interviewId } = req.params;

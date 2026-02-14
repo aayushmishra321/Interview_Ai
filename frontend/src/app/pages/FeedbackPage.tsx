@@ -212,7 +212,7 @@ export function FeedbackPage() {
               <Home className="mr-2 w-4 h-4" />
               Dashboard
             </Button>
-            <Button variant="gradient" glow onClick={handleDownloadPDF} disabled={downloading}>
+            <Button variant="gradient" onClick={handleDownloadPDF} disabled={downloading} className="shadow-lg shadow-primary/50">
               {downloading ? (
                 <>
                   <Loader2 className="mr-2 w-4 h-4 animate-spin" />
@@ -229,7 +229,7 @@ export function FeedbackPage() {
         </div>
 
         {/* Overall Score */}
-        <Card glow className="text-center">
+        <Card className="text-center shadow-lg shadow-primary/10">
           <div className="flex flex-col md:flex-row items-center justify-around gap-8">
             <div>
               <h2 className="text-lg text-muted-foreground mb-4">Overall Performance</h2>
@@ -486,7 +486,7 @@ export function FeedbackPage() {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button variant="gradient" size="lg" onClick={() => navigate('/interview-setup')} glow>
+          <Button variant="gradient" size="lg" onClick={() => navigate('/interview-setup')} className="shadow-lg shadow-primary/50">
             Start Another Interview
           </Button>
           <Button variant="outline" size="lg" onClick={() => navigate('/dashboard')}>
