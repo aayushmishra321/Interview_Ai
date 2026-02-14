@@ -197,9 +197,17 @@ class CodeExecutionService {
     const testResults = [];
 
     for (const testCase of request.testCases) {
+      // Wrap user code to call the solution function with test input
+      const wrappedCode = this.wrapCodeWithTestCase(
+        request.language,
+        request.code,
+        testCase.input
+      );
+
       const result = await this.execute({
         ...request,
-        stdin: testCase.input,
+        code: wrappedCode,
+        stdin: '', // No stdin needed, we're calling the function directly
       });
 
       const actualOutput = (result.output || '').trim();
@@ -221,6 +229,92 @@ class CodeExecutionService {
       testResults,
       output: testResults.map((r) => r.actualOutput).join('\n'),
     };
+  }
+
+  /**
+   * Wrap user code to call solution function with test input
+   */
+  private wrapCodeWithTestCase(language: string, userCode: string, testInput: string): string {
+    switch (language) {
+      case 'python':
+        // Parse JSON string and convert to Python literal
+        try {
+          const parsedInput = JSON.parse(testInput);
+          const pythonInput = JSON.stringify(parsedInput);
+          return `import json
+
+${userCode}
+
+# Test execution
+test_input = json.loads('${pythonInput.replace(/'/g, "\\'")}')
+result = solution(test_input)
+print(result)`;
+        } catch (e) {
+          // If not valid JSON, treat as Python literal
+          return `${userCode}
+
+# Test execution
+test_input = ${testInput}
+result = solution(test_input)
+print(result)`;
+        }
+
+      case 'javascript':
+      case 'typescript':
+        try {
+          const parsedInput = JSON.parse(testInput);
+          const jsInput = JSON.stringify(parsedInput);
+          return `${userCode}
+
+// Test execution
+const testInput = ${jsInput};
+const result = solution(testInput);
+console.log(result);`;
+        } catch (e) {
+          return `${userCode}
+
+// Test execution
+const testInput = ${testInput};
+const result = solution(testInput);
+console.log(result);`;
+        }
+
+      case 'java':
+        return `import com.google.gson.Gson;
+
+${userCode}
+
+public class Main {
+    public static void main(String[] args) {
+        Gson gson = new Gson();
+        Object testInput = gson.fromJson("${testInput.replace(/"/g, '\\"')}", Object.class);
+        Solution solution = new Solution();
+        Object result = solution.solution(testInput);
+        System.out.println(result);
+    }
+}`;
+
+      case 'cpp':
+        return `#include <iostream>
+#include <string>
+using namespace std;
+
+${userCode}
+
+int main() {
+    // Note: C++ test case parsing is simplified
+    Solution solution;
+    auto result = solution.solution(${testInput});
+    cout << result << endl;
+    return 0;
+}`;
+
+      default:
+        // For other languages, return code as-is and hope it works
+        return `${userCode}
+
+print(solution(${testInput}))`;
+    }
   }
 
   /**
