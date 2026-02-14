@@ -37,10 +37,21 @@ export function createApp(): Application {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
+        scriptSrc: ["'self'", "https://js.stripe.com"],
+        imgSrc: ["'self'", "data:", "https:", "https://*.stripe.com"],
+        frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
+        connectSrc: ["'self'", "https://api.stripe.com"],
+        fontSrc: ["'self'", "https:", "data:"],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+        objectSrc: ["'none'"],
+        scriptSrcAttr: ["'none'"],
+        upgradeInsecureRequests: [],
       },
     },
+    crossOriginOpenerPolicy: { policy: "same-origin" },
+    crossOriginResourcePolicy: { policy: "same-origin" },
+    originAgentCluster: true,
   }));
 
   // CORS configuration
