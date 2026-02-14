@@ -17,6 +17,7 @@ const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage').then(m => ({ default: m.SubscriptionPage })));
+const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage').then(m => ({ default: m.PaymentSuccessPage })));
 const ResumeAnalyzerPage = lazy(() => import('./pages/ResumeAnalyzerPage').then(m => ({ default: m.ResumeAnalyzerPage })));
 const InterviewSetupPage = lazy(() => import('./pages/InterviewSetupPage').then(m => ({ default: m.InterviewSetupPage })));
 const InterviewRoomPage = lazy(() => import('./pages/InterviewRoomPage').then(m => ({ default: m.InterviewRoomPage })));
@@ -137,6 +138,13 @@ function AppContent() {
           <ProtectedRoute>
             <Suspense fallback={<PageLoader />}>
               <SubscriptionPage />
+            </Suspense>
+          </ProtectedRoute>
+        } />
+        <Route path="/payment/success" element={
+          <ProtectedRoute>
+            <Suspense fallback={<PageLoader />}>
+              <PaymentSuccessPage />
             </Suspense>
           </ProtectedRoute>
         } />

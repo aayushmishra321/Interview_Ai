@@ -343,6 +343,89 @@ router.post('/webhook', express.raw({ type: 'application/json' }), asyncHandler(
 }));
 
 /**
+ * Verify payment session and update subscription
+ * GET /api/payment/verify-session/:sessionId
+ */
+router.get('/verify-session/:sessionId', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+  const { sessionId } = req.params;
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+    });
+  }
+
+  if (!stripeService.isReady()) {
+    return res.status(503).json({
+      success: false,
+      error: 'Payment service not configured',
+    });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    // Get session from Stripe
+    const stripe = stripeService.getStripe();
+    if (!stripe) {
+      return res.status(503).json({
+        success: false,
+        error: 'Stripe not available',
+      });
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status === 'paid' && session.customer) {
+      // Update user subscription
+      const plan = session.metadata?.plan as 'pro' | 'enterprise' | undefined;
+      
+      if (plan) {
+        user.subscription.plan = plan;
+        user.subscription.status = 'active';
+        user.subscription.stripeCustomerId = session.customer as string;
+        
+        // Get subscription ID from session
+        if (session.subscription) {
+          user.subscription.stripeSubscriptionId = session.subscription as string;
+          
+          // Get subscription details for expiry date
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          user.subscription.expiresAt = new Date((subscription as any).current_period_end * 1000);
+        }
+        
+        await user.save();
+
+        logger.info(`Subscription activated for user: ${user.email}, plan: ${plan}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        paymentStatus: session.payment_status,
+        subscription: user.subscription,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Verify session error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify session',
+      message: error.message,
+    });
+  }
+}));
+
+/**
  * Get pricing plans
  * GET /api/payment/plans
  */
