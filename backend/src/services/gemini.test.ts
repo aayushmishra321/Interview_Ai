@@ -30,6 +30,21 @@ import geminiService from './gemini';
 describe('Gemini Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Reset mock to default successful response
+    mockGenerateContent.mockResolvedValue({
+      response: {
+        text: () => JSON.stringify([
+          {
+            id: '1',
+            text: 'Sample question',
+            type: 'technical',
+            difficulty: 'medium',
+            expectedDuration: 5,
+          },
+        ]),
+      },
+    });
   });
 
   describe('Service Initialization', () => {
@@ -42,7 +57,7 @@ describe('Gemini Service', () => {
     it('should generate questions successfully', async () => {
       // Mock successful response
       mockGenerateContent.mockResolvedValue({
-        response: Promise.resolve({
+        response: {
           text: () => JSON.stringify([
             {
               id: '1',
@@ -59,7 +74,7 @@ describe('Gemini Service', () => {
               expectedDuration: 5,
             },
           ]),
-        }),
+        },
       });
 
       const params = {
@@ -100,10 +115,9 @@ describe('Gemini Service', () => {
     it('should handle JSON parse errors with fallback', async () => {
       // Mock invalid JSON response
       mockGenerateContent.mockResolvedValue({
-        response: Promise.resolve({
+        response: {
           text: () => 'Invalid JSON response',
-        }),
-      });
+        }});
 
       const result = await geminiService.generateInterviewQuestions({
         role: 'Engineer',
@@ -120,7 +134,7 @@ describe('Gemini Service', () => {
     it('should generate coding questions for coding interviews', async () => {
       // Mock coding questions response
       mockGenerateContent.mockResolvedValue({
-        response: Promise.resolve({
+        response: {
           text: () => JSON.stringify([
             {
               id: '1',
@@ -131,8 +145,7 @@ describe('Gemini Service', () => {
               testCases: [{ input: '[2,7,11,15], 9', expectedOutput: '[0,1]' }],
             },
           ]),
-        }),
-      });
+        }});
 
       const result = await geminiService.generateInterviewQuestions({
         role: 'Software Engineer',
@@ -151,7 +164,7 @@ describe('Gemini Service', () => {
 
       for (const difficulty of difficulties) {
         mockGenerateContent.mockResolvedValue({
-          response: Promise.resolve({
+          response: {
             text: () => JSON.stringify([
               {
                 id: '1',
@@ -161,8 +174,7 @@ describe('Gemini Service', () => {
                 expectedDuration: 5,
               },
             ]),
-          }),
-        });
+          }});
 
         const result = await geminiService.generateInterviewQuestions({
           role: 'Engineer',
@@ -182,7 +194,7 @@ describe('Gemini Service', () => {
     it('should analyze response successfully', async () => {
       // Mock successful analysis
       mockGenerateContent.mockResolvedValue({
-        response: Promise.resolve({
+        response: {
           text: () => JSON.stringify({
             scores: {
               relevance: 85,
@@ -194,8 +206,7 @@ describe('Gemini Service', () => {
             improvements: ['Add more examples'],
             feedback: 'Good response overall',
           }),
-        }),
-      });
+        }});
 
       const result = await geminiService.analyzeResponse({
         question: 'What is React?',
@@ -242,7 +253,7 @@ describe('Gemini Service', () => {
     it('should generate feedback successfully', async () => {
       // Mock successful feedback
       mockGenerateContent.mockResolvedValue({
-        response: Promise.resolve({
+        response: {
           text: () => JSON.stringify({
             overallRating: 80,
             strengths: ['Good technical knowledge'],
@@ -250,8 +261,7 @@ describe('Gemini Service', () => {
             recommendations: ['Practice more'],
             detailedFeedback: 'Overall good performance',
           }),
-        }),
-      });
+        }});
 
       const result = await geminiService.generateFeedback({
         interviewData: {
@@ -293,15 +303,14 @@ describe('Gemini Service', () => {
     it('should analyze resume successfully', async () => {
       // Mock successful resume analysis
       mockGenerateContent.mockResolvedValue({
-        response: Promise.resolve({
+        response: {
           text: () => JSON.stringify({
             skills: ['JavaScript', 'React', 'Node.js'],
             experience: 3,
             strengths: ['Strong technical skills'],
             score: 85,
           }),
-        }),
-      });
+        }});
 
       const result = await geminiService.analyzeResume({
         resumeText: 'Software Engineer with 3 years experience in JavaScript and React',
@@ -435,10 +444,9 @@ describe('Gemini Service', () => {
     it('should handle malformed JSON responses', async () => {
       // Mock malformed JSON
       mockGenerateContent.mockResolvedValue({
-        response: Promise.resolve({
+        response: {
           text: () => '{invalid json}',
-        }),
-      });
+        }});
 
       const result = await geminiService.generateInterviewQuestions({
         role: 'Developer',
@@ -455,10 +463,9 @@ describe('Gemini Service', () => {
     it('should handle empty responses', async () => {
       // Mock empty response
       mockGenerateContent.mockResolvedValue({
-        response: Promise.resolve({
+        response: {
           text: () => '',
-        }),
-      });
+        }});
 
       const result = await geminiService.generateInterviewQuestions({
         role: 'Developer',
@@ -476,7 +483,7 @@ describe('Gemini Service', () => {
     it('should return questions with required properties', async () => {
       // Mock valid response
       mockGenerateContent.mockResolvedValue({
-        response: Promise.resolve({
+        response: {
           text: () => JSON.stringify([
             {
               id: '1',
@@ -486,8 +493,7 @@ describe('Gemini Service', () => {
               expectedDuration: 5,
             },
           ]),
-        }),
-      });
+        }});
 
       const result = await geminiService.generateInterviewQuestions({
         role: 'Engineer',
@@ -509,10 +515,9 @@ describe('Gemini Service', () => {
     it('should handle markdown code blocks in responses', async () => {
       // Mock response with markdown code blocks
       mockGenerateContent.mockResolvedValue({
-        response: Promise.resolve({
+        response: {
           text: () => '```json\n[{"id":"1","text":"Test","type":"technical","difficulty":"medium","expectedDuration":5}]\n```',
-        }),
-      });
+        }});
 
       const result = await geminiService.generateInterviewQuestions({
         role: 'Engineer',
@@ -527,3 +532,5 @@ describe('Gemini Service', () => {
     });
   });
 });
+
+

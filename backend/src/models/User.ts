@@ -243,7 +243,7 @@ userSchema.methods.incLoginAttempts = async function(): Promise<void> {
 
   // Lock account after 5 failed attempts for 2 hours
   if (this.auth.loginAttempts + 1 >= 5 && !this.isAccountLocked()) {
-    updates.$set = { 'auth.lockUntil': Date.now() + 2 * 60 * 60 * 1000 }; // 2 hours
+    updates.$set = { 'auth.lockUntil': new Date(Date.now() + 2 * 60 * 60 * 1000) }; // 2 hours
   }
 
   return this.updateOne(updates);

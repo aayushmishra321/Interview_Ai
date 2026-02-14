@@ -133,10 +133,13 @@ describe('Auth Routes', () => {
   });
 
   describe('POST /api/auth/login', () => {
+    let testEmail: string;
+
     beforeEach(async () => {
-      // Create a test user
+      // Create a test user with a consistent email for this test suite
+      testEmail = generateUniqueEmail('login');
       await User.create({
-        email: generateUniqueEmail('login'),
+        email: testEmail,
         password: 'Password123!',
         profile: {
           firstName: 'Test',
@@ -149,13 +152,13 @@ describe('Auth Routes', () => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
-          email: generateUniqueEmail('login'),
+          email: testEmail,
           password: 'Password123!',
         })
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.user.email).toBe('login@example.com');
+      expect(response.body.data.user.email).toBe(testEmail);
       expect(response.body.data.tokens).toHaveProperty('accessToken');
       expect(response.body.data.tokens).toHaveProperty('refreshToken');
     });
@@ -164,7 +167,7 @@ describe('Auth Routes', () => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
-          email: generateUniqueEmail('login'),
+          email: testEmail,
           password: 'WrongPassword123!',
         })
         .expect(401);
@@ -191,7 +194,7 @@ describe('Auth Routes', () => {
         await request(app)
           .post('/api/auth/login')
           .send({
-            email: generateUniqueEmail('login'),
+            email: testEmail,
             password: 'WrongPassword!',
           });
       }
@@ -200,7 +203,7 @@ describe('Auth Routes', () => {
       const response = await request(app)
         .post('/api/auth/login')
         .send({
-          email: generateUniqueEmail('login'),
+          email: testEmail,
           password: 'Password123!',
         })
         .expect(423);
@@ -210,9 +213,12 @@ describe('Auth Routes', () => {
   });
 
   describe('POST /api/auth/forgot-password', () => {
+    let testEmail: string;
+
     beforeEach(async () => {
+      testEmail = generateUniqueEmail('forgot');
       await User.create({
-        email: generateUniqueEmail('forgot'),
+        email: testEmail,
         password: 'Password123!',
         profile: {
           firstName: 'Test',
@@ -225,12 +231,12 @@ describe('Auth Routes', () => {
       const response = await request(app)
         .post('/api/auth/forgot-password')
         .send({
-          email: generateUniqueEmail('forgot'),
+          email: testEmail,
         })
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.message).toContain('reset link');
+      expect(response.body.message).toContain('email exists');
     });
 
     it('should not reveal if email does not exist', async () => {
@@ -243,6 +249,7 @@ describe('Auth Routes', () => {
 
       expect(response.body.success).toBe(true);
       // Should return same message for security
+      expect(response.body.message).toContain('email exists');
     });
 
     it('should fail with invalid email format', async () => {
@@ -348,10 +355,11 @@ describe('Auth Routes', () => {
 
   describe('POST /api/auth/create-profile', () => {
     it('should create profile for Auth0 user', async () => {
+      const testEmail = generateUniqueEmail('auth0');
       const response = await request(app)
         .post('/api/auth/create-profile')
         .send({
-          email: generateUniqueEmail('auth0'),
+          email: testEmail,
           profile: {
             firstName: 'Auth0',
             lastName: 'User',
@@ -364,15 +372,17 @@ describe('Auth Routes', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.email).toBe('auth0@example.com');
+      expect(response.body.data.email).toBe(testEmail);
     });
 
     it('should update existing Auth0 user profile', async () => {
+      const testEmail = generateUniqueEmail('update');
+      
       // Create initial profile
       await request(app)
         .post('/api/auth/create-profile')
         .send({
-          email: generateUniqueEmail('update'),
+          email: testEmail,
           profile: {
             firstName: 'Initial',
             lastName: 'Name',
@@ -383,7 +393,7 @@ describe('Auth Routes', () => {
       const response = await request(app)
         .post('/api/auth/create-profile')
         .send({
-          email: generateUniqueEmail('update'),
+          email: testEmail,
           profile: {
             firstName: 'Updated',
             lastName: 'Name',

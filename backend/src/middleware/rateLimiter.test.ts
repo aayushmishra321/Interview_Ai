@@ -17,6 +17,8 @@ describe('Rate Limiter Middleware', () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
       setHeader: jest.fn(),
+      set: jest.fn(),
+      get: jest.fn(),
     };
     mockNext = jest.fn();
   });
@@ -27,9 +29,11 @@ describe('Rate Limiter Middleware', () => {
       expect(typeof apiLimiter).toBe('function');
     });
 
-    it('should allow requests within limit', () => {
-      apiLimiter(mockReq as Request, mockRes as Response, mockNext);
-      expect(mockNext).toHaveBeenCalled();
+    it('should allow requests within limit', (done) => {
+      apiLimiter(mockReq as Request, mockRes as Response, () => {
+        expect(mockNext).not.toHaveBeenCalled(); // We're using a custom next
+        done();
+      });
     });
   });
 
@@ -39,9 +43,11 @@ describe('Rate Limiter Middleware', () => {
       expect(typeof authLimiter).toBe('function');
     });
 
-    it('should allow requests within limit', () => {
-      authLimiter(mockReq as Request, mockRes as Response, mockNext);
-      expect(mockNext).toHaveBeenCalled();
+    it('should allow requests within limit', (done) => {
+      authLimiter(mockReq as Request, mockRes as Response, () => {
+        expect(mockNext).not.toHaveBeenCalled(); // We're using a custom next
+        done();
+      });
     });
   });
 
@@ -51,9 +57,11 @@ describe('Rate Limiter Middleware', () => {
       expect(typeof passwordResetLimiter).toBe('function');
     });
 
-    it('should allow requests within limit', () => {
-      passwordResetLimiter(mockReq as Request, mockRes as Response, mockNext);
-      expect(mockNext).toHaveBeenCalled();
+    it('should allow requests within limit', (done) => {
+      passwordResetLimiter(mockReq as Request, mockRes as Response, () => {
+        expect(mockNext).not.toHaveBeenCalled(); // We're using a custom next
+        done();
+      });
     });
   });
 });

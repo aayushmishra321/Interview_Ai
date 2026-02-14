@@ -32,7 +32,7 @@ describe('Payment Routes', () => {
   describe('POST /api/payment/create-checkout-session', () => {
     it('should create checkout session or return service unavailable', async () => {
       const response = await request(app)
-        .post('/create-checkout-session')
+        .post('/api/payment/create-checkout-session')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           priceId: 'price_test123',
@@ -51,7 +51,7 @@ describe('Payment Routes', () => {
 
     it('should require priceId and plan', async () => {
       const response = await request(app)
-        .post('/create-checkout-session')
+        .post('/api/payment/create-checkout-session')
         .set('Authorization', `Bearer ${authToken}`)
         .send({});
 
@@ -66,7 +66,7 @@ describe('Payment Routes', () => {
       await testUser.save();
 
       const response = await request(app)
-        .post('/create-portal-session')
+        .post('/api/payment/create-portal-session')
         .set('Authorization', `Bearer ${authToken}`);
 
       // Accept 200 (success) or 503 (service unavailable)
@@ -79,7 +79,7 @@ describe('Payment Routes', () => {
 
     it('should return error without customer ID', async () => {
       const response = await request(app)
-        .post('/create-portal-session')
+        .post('/api/payment/create-portal-session')
         .set('Authorization', `Bearer ${authToken}`);
 
       // Accept 400 (bad request) or 503 (service unavailable)
@@ -90,7 +90,7 @@ describe('Payment Routes', () => {
   describe('GET /api/payment/subscription', () => {
     it('should get subscription status', async () => {
       const response = await request(app)
-        .get('/subscription')
+        .get('/api/payment/subscription')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -106,7 +106,7 @@ describe('Payment Routes', () => {
       await testUser.save();
 
       const response = await request(app)
-        .post('/cancel-subscription')
+        .post('/api/payment/cancel-subscription')
         .set('Authorization', `Bearer ${authToken}`);
 
       // Accept 200 (success) or 503 (service unavailable)
@@ -119,7 +119,7 @@ describe('Payment Routes', () => {
 
     it('should return error without subscription', async () => {
       const response = await request(app)
-        .post('/cancel-subscription')
+        .post('/api/payment/cancel-subscription')
         .set('Authorization', `Bearer ${authToken}`);
 
       // Should return 400 or 503 depending on Stripe availability
@@ -129,7 +129,7 @@ describe('Payment Routes', () => {
 
   describe('GET /api/payment/plans', () => {
     it('should get pricing plans without authentication', async () => {
-      const response = await request(app).get('/plans');
+      const response = await request(app).get('/api/payment/plans');
 
       expect(response.status).toBe(200);
       expect(response.body.data).toBeInstanceOf(Array);
@@ -141,7 +141,7 @@ describe('Payment Routes', () => {
 
   describe('GET /api/payment/health', () => {
     it('should check payment service health without authentication', async () => {
-      const response = await request(app).get('/health');
+      const response = await request(app).get('/api/payment/health');
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('status');
@@ -151,7 +151,7 @@ describe('Payment Routes', () => {
   describe('POST /api/payment/webhook', () => {
     it('should handle webhook events', async () => {
       const response = await request(app)
-        .post('/webhook')
+        .post('/api/payment/webhook')
         .set('stripe-signature', 'test_signature')
         .send({ type: 'checkout.session.completed' });
 
@@ -161,7 +161,7 @@ describe('Payment Routes', () => {
 
     it('should require stripe-signature header', async () => {
       const response = await request(app)
-        .post('/webhook')
+        .post('/api/payment/webhook')
         .send({ type: 'test' });
 
       expect([400, 503]).toContain(response.status);

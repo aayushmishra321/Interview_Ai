@@ -19,6 +19,7 @@ export function Header() {
     { name: 'Dashboard', path: '/dashboard' },
     { name: 'Resume', path: '/resume' },
     { name: 'History', path: '/history' },
+    { name: 'Pricing', path: '/subscription' },
   ] : [
     { name: 'Features', path: '#features' },
     { name: 'How it Works', path: '#how-it-works' },

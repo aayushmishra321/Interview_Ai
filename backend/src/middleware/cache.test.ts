@@ -2,7 +2,14 @@ import { cache } from './cache';
 import { Request, Response, NextFunction } from 'express';
 import redisService from '../services/redis';
 
-jest.mock('../services/redis');
+jest.mock('../services/redis', () => ({
+  __esModule: true,
+  default: {
+    isHealthy: jest.fn(),
+    get: jest.fn(),
+    set: jest.fn(),
+  },
+}));
 
 describe('Cache Middleware', () => {
   let mockReq: Partial<Request>;
@@ -58,8 +65,7 @@ describe('Cache Middleware', () => {
       (redisService.get as jest.Mock).mockResolvedValue(JSON.stringify(cachedData));
       const middleware = cache(300);
       await middleware(mockReq as Request, mockRes as Response, mockNext);
-      // Either next is called or response is sent
-      expect(mockNext).toHaveBeenCalled();
+      expect(mockRes.json).toHaveBeenCalledWith(cachedData);
     });
   });
 });

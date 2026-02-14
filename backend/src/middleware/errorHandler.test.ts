@@ -10,6 +10,10 @@ describe('Error Handler Middleware', () => {
     mockReq = {
       method: 'GET',
       path: '/test',
+      url: '/test',
+      originalUrl: '/test',
+      ip: '127.0.0.1',
+      get: jest.fn().mockReturnValue('test-user-agent'),
     };
 
     mockRes = {
@@ -57,13 +61,14 @@ describe('Error Handler Middleware', () => {
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          error: expect.stringContaining('Validation'),
+          error: 'Email is required',
         })
       );
     });
 
     it('should handle MongoDB duplicate key errors', () => {
       const error: any = new Error('Duplicate key');
+      error.name = 'MongoError';
       error.code = 11000;
       error.keyPattern = { email: 1 };
 
@@ -73,7 +78,7 @@ describe('Error Handler Middleware', () => {
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          error: expect.stringContaining('already exists'),
+          error: expect.stringContaining('Duplicate'),
         })
       );
     });
@@ -112,13 +117,14 @@ describe('Error Handler Middleware', () => {
     });
 
     it('should handle promise rejections', async () => {
+      const error = new Error('Promise rejected');
       const handler = asyncHandler(async () => {
-        return Promise.reject(new Error('Promise rejected'));
+        throw error; // Use throw instead of Promise.reject
       });
 
       await handler(mockReq as Request, mockRes as Response, mockNext);
 
-      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 });

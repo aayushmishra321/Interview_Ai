@@ -33,7 +33,7 @@ describe('User Routes', () => {
   describe('GET /api/user/profile', () => {
     it('should get user profile', async () => {
       const response = await request(app)
-        .get('/profile')
+        .get('/api/user/profile')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -45,7 +45,7 @@ describe('User Routes', () => {
     it('should return 401 without authentication', async () => {
       // Create app without test user to test 401
       const unauthApp = createTestApp(userRouter, undefined, '/api/user');
-      const response = await request(unauthApp).get('/profile');
+      const response = await request(unauthApp).get('/api/user/profile');
 
       expect(response.status).toBe(401);
     });
@@ -62,7 +62,7 @@ describe('User Routes', () => {
       };
 
       const response = await request(app)
-        .put('/profile')
+        .put('/api/user/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send(updates);
 
@@ -82,7 +82,7 @@ describe('User Routes', () => {
       };
 
       const response = await request(app)
-        .put('/profile')
+        .put('/api/user/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send(updates);
 
@@ -103,7 +103,7 @@ describe('User Routes', () => {
       });
 
       const response = await request(app)
-        .get('/stats')
+        .get('/api/user/stats')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -123,7 +123,7 @@ describe('User Routes', () => {
       };
 
       const response = await request(app)
-        .put('/preferences')
+        .put('/api/user/preferences')
         .set('Authorization', `Bearer ${authToken}`)
         .send(preferences);
 
@@ -138,7 +138,7 @@ describe('User Routes', () => {
       };
 
       const response = await request(app)
-        .put('/preferences')
+        .put('/api/user/preferences')
         .set('Authorization', `Bearer ${authToken}`)
         .send(preferences);
 
@@ -149,7 +149,7 @@ describe('User Routes', () => {
   describe('DELETE /api/user/account', () => {
     it('should delete user account', async () => {
       const response = await request(app)
-        .delete('/account')
+        .delete('/api/user/account')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);

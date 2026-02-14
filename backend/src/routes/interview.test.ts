@@ -25,7 +25,40 @@ describe('Interview Routes', () => {
 
   beforeEach(async () => {
     await cleanupTestData();
+    
+    // Reset and reconfigure mocks before each test
     jest.clearAllMocks();
+    
+    // Ensure Gemini mock returns proper data
+    const geminiService = require('../services/gemini').default;
+    geminiService.generateInterviewQuestions.mockResolvedValue([
+      { 
+        id: 'q1', 
+        text: 'Test question 1', 
+        type: 'technical', 
+        difficulty: 'medium',
+        expectedDuration: 5,
+        category: 'general'
+      },
+      { 
+        id: 'q2', 
+        text: 'Test question 2', 
+        type: 'technical', 
+        difficulty: 'medium',
+        expectedDuration: 5,
+        category: 'general'
+      }
+    ]);
+    
+    geminiService.generateFeedback.mockResolvedValue({
+      overallRating: 85,
+      strengths: ['Good communication', 'Technical knowledge'],
+      improvements: ['Time management'],
+      recommendations: ['Practice more algorithms'],
+      detailedFeedback: 'Overall good performance',
+      nextSteps: ['Focus on system design']
+    });
+    
     testUser = await createTestUser();
     authToken = getAuthToken(testUser);
     app = createTestApp(interviewRouter, testUser, '/api/interview');

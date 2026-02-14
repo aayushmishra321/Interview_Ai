@@ -24,6 +24,16 @@ describe('Resume Routes', () => {
   beforeEach(async () => {
     await cleanupTestData();
     jest.clearAllMocks();
+    
+    // Reconfigure Gemini mock for resume analysis
+    const geminiService = require('../services/gemini').default;
+    geminiService.analyzeResume.mockResolvedValue({
+      skills: ['JavaScript', 'React', 'Node.js'],
+      experience: 5,
+      score: 85,
+      recommendations: ['Add more certifications', 'Highlight leadership']
+    });
+    
     testUser = await createTestUser();
     authToken = getAuthToken(testUser);
     app = createTestApp(resumeRouter, testUser, '/api/resume');
@@ -32,7 +42,7 @@ describe('Resume Routes', () => {
   describe('POST /api/resume/upload', () => {
     it('should require authentication', async () => {
       const response = await request(app)
-        .post('/upload')
+        .post('/api/resume/upload')
         .attach('resume', Buffer.from('test'), 'test.pdf');
 
       expect(response.status).toBe(401);
@@ -40,7 +50,7 @@ describe('Resume Routes', () => {
 
     it('should require resume file', async () => {
       const response = await request(app)
-        .post('/upload')
+        .post('/api/resume/upload')
         .set('Authorization', `Bearer ${authToken}`);
 
       // May return 400 or 401 depending on middleware order
@@ -51,7 +61,7 @@ describe('Resume Routes', () => {
   describe('GET /api/resume/latest', () => {
     it('should return null when no resume uploaded', async () => {
       const response = await request(app)
-        .get('/latest')
+        .get('/api/resume/latest')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -76,7 +86,7 @@ describe('Resume Routes', () => {
       });
 
       const response = await request(app)
-        .get('/latest')
+        .get('/api/resume/latest')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -163,7 +173,7 @@ describe('Resume Routes', () => {
   describe('POST /api/resume/analyze', () => {
     it('should analyze resume text', async () => {
       const response = await request(app)
-        .post('/analyze')
+        .post('/api/resume/analyze')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           resumeText: 'Experienced software engineer with 5 years in React and Node.js',
@@ -172,13 +182,13 @@ describe('Resume Routes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      // Gemini mock returns skills
       expect(response.body.data).toBeDefined();
+      expect(response.body.data.skills).toBeDefined();
     });
 
     it('should require resume text', async () => {
       const response = await request(app)
-        .post('/analyze')
+        .post('/api/resume/analyze')
         .set('Authorization', `Bearer ${authToken}`)
         .send({});
 

@@ -44,8 +44,9 @@ describe('User Model', () => {
     });
 
     it('should fail with duplicate email', async () => {
+      const email = generateUniqueEmail('duplicate');
       const userData = {
-        email: generateUniqueEmail('duplicate'),
+        email,
         password: 'Password123!',
         profile: {
           firstName: 'John',
@@ -53,9 +54,24 @@ describe('User Model', () => {
         },
       };
 
-      await User.create(userData);
+      const firstUser = await User.create(userData);
+      expect(firstUser).toBeTruthy();
+      
+      // Ensure the first user is saved before trying to create duplicate
+      await firstUser.save();
 
-      await expect(User.create(userData)).rejects.toThrow();
+      // Try to create another user with the same email - should fail
+      try {
+        await User.create({ ...userData });
+        fail('Should have thrown an error for duplicate email');
+      } catch (error: any) {
+        expect(error).toBeDefined();
+        // Check for either MongoDB duplicate key error or validation error
+        const isDuplicateError = error.code === 11000 || 
+                                 error.message?.includes('duplicate') ||
+                                 error.message?.includes('E11000');
+        expect(isDuplicateError).toBe(true);
+      }
     });
 
     it('should fail with invalid email', async () => {
@@ -167,7 +183,7 @@ describe('User Model', () => {
 
   describe('Account Locking', () => {
     it('should lock account after 5 failed attempts', async () => {
-      const user = await User.create({
+      let user = await User.create({
         email: generateUniqueEmail('lock'),
         password: 'Password123!',
         profile: {
@@ -176,12 +192,23 @@ describe('User Model', () => {
         },
       });
 
+      expect(user).toBeTruthy();
+      const userId = user._id;
+
       // Simulate 5 failed login attempts
       for (let i = 0; i < 5; i++) {
+        // Fetch fresh user data from database
+        user = (await User.findById(userId))!;
+        expect(user).toBeTruthy();
+        
         await user.incLoginAttempts();
       }
 
-      const lockedUser = await User.findById(user._id);
+      // Fetch the final updated user from database
+      const lockedUser = await User.findById(userId);
+      expect(lockedUser).toBeTruthy();
+      expect(lockedUser!.auth.loginAttempts).toBeGreaterThanOrEqual(5);
+      expect(lockedUser!.auth.lockUntil).toBeTruthy();
       expect(lockedUser!.isAccountLocked()).toBe(true);
     });
 
@@ -196,6 +223,7 @@ describe('User Model', () => {
       });
 
       expect(user.isAccountLocked()).toBe(false);
+      expect(user.auth.loginAttempts).toBe(0);
     });
   });
 
@@ -220,8 +248,9 @@ describe('User Model', () => {
 
   describe('User Queries', () => {
     it('should find user by email', async () => {
+      const email = generateUniqueEmail('find');
       await User.create({
-        email: generateUniqueEmail('find'),
+        email,
         password: 'Password123!',
         profile: {
           firstName: 'John',
@@ -229,15 +258,16 @@ describe('User Model', () => {
         },
       });
 
-      const user = await User.findOne({ email: generateUniqueEmail('find') });
+      const user = await User.findOne({ email });
 
       expect(user).toBeTruthy();
-      expect(user!.email).toBe('find@example.com');
+      expect(user!.email).toBe(email);
     });
 
     it('should not include password by default', async () => {
+      const email = generateUniqueEmail('nopass');
       await User.create({
-        email: generateUniqueEmail('nopass'),
+        email,
         password: 'Password123!',
         profile: {
           firstName: 'John',
@@ -245,9 +275,11 @@ describe('User Model', () => {
         },
       });
 
-      const user = await User.findOne({ email: generateUniqueEmail('nopass') });
+      const user = await User.findOne({ email });
 
-      expect(user).not.toHaveProperty('password');
+      expect(user).toBeTruthy();
+      // Password field should be undefined when not explicitly selected
+      expect((user as any).password).toBeUndefined();
     });
   });
 });

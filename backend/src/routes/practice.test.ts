@@ -23,6 +23,39 @@ describe('Practice Routes', () => {
   beforeEach(async () => {
     await cleanupTestData();
     jest.clearAllMocks();
+    
+    // Reconfigure Gemini mock for practice questions
+    const geminiService = require('../services/gemini').default;
+    geminiService.generateInterviewQuestions.mockResolvedValue([
+      { 
+        id: 'q1', 
+        text: 'Test question 1', 
+        type: 'technical', 
+        difficulty: 'medium',
+        expectedDuration: 5,
+        category: 'general'
+      },
+      { 
+        id: 'q2', 
+        text: 'Test question 2', 
+        type: 'technical', 
+        difficulty: 'medium',
+        expectedDuration: 5,
+        category: 'general'
+      }
+    ]);
+    geminiService.analyzeResponse.mockResolvedValue({
+      score: 85,
+      feedback: 'Good answer',
+      scores: { 
+        relevance: 85, 
+        technicalAccuracy: 85, 
+        clarity: 80,
+        structure: 80
+      },
+      keywordMatches: ['algorithm', 'optimization']
+    });
+    
     testUser = await createTestUser();
     authToken = getAuthToken(testUser);
     app = createTestApp(practiceRouter, testUser, '/api/practice');
@@ -31,7 +64,7 @@ describe('Practice Routes', () => {
   describe('POST /api/practice/questions', () => {
     it('should generate practice questions', async () => {
       const response = await request(app)
-        .post('/questions')
+        .post('/api/practice/questions')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'technical',
@@ -49,7 +82,7 @@ describe('Practice Routes', () => {
 
     it('should validate type', async () => {
       const response = await request(app)
-        .post('/questions')
+        .post('/api/practice/questions')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'invalid',
@@ -62,7 +95,7 @@ describe('Practice Routes', () => {
 
     it('should validate difficulty', async () => {
       const response = await request(app)
-        .post('/questions')
+        .post('/api/practice/questions')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'technical',
@@ -75,7 +108,7 @@ describe('Practice Routes', () => {
 
     it('should validate count range', async () => {
       const response = await request(app)
-        .post('/questions')
+        .post('/api/practice/questions')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'technical',
@@ -92,7 +125,7 @@ describe('Practice Routes', () => {
 
     beforeEach(async () => {
       const questionsResponse = await request(app)
-        .post('/questions')
+        .post('/api/practice/questions')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'behavioral',
@@ -110,7 +143,7 @@ describe('Practice Routes', () => {
       }
 
       const response = await request(app)
-        .post('/response')
+        .post('/api/practice/response')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           sessionId,
@@ -124,7 +157,7 @@ describe('Practice Routes', () => {
 
     it('should require sessionId', async () => {
       const response = await request(app)
-        .post('/response')
+        .post('/api/practice/response')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           questionId: 'q1',
@@ -136,7 +169,7 @@ describe('Practice Routes', () => {
 
     it('should return 404 for invalid session', async () => {
       const response = await request(app)
-        .post('/response')
+        .post('/api/practice/response')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           sessionId: 'invalid_session',
@@ -153,7 +186,7 @@ describe('Practice Routes', () => {
 
     beforeEach(async () => {
       const questionsResponse = await request(app)
-        .post('/questions')
+        .post('/api/practice/questions')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'technical',
@@ -180,7 +213,7 @@ describe('Practice Routes', () => {
 
     it('should return 404 for invalid session', async () => {
       const response = await request(app)
-        .get('/session/invalid')
+        .get('/api/practice/session/invalid')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(404);
@@ -192,7 +225,7 @@ describe('Practice Routes', () => {
 
     beforeEach(async () => {
       const questionsResponse = await request(app)
-        .post('/questions')
+        .post('/api/practice/questions')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'coding',
@@ -219,7 +252,7 @@ describe('Practice Routes', () => {
 
     it('should return 404 for invalid session', async () => {
       const response = await request(app)
-        .post('/session/invalid/end')
+        .post('/api/practice/session/invalid/end')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(404);
@@ -230,7 +263,7 @@ describe('Practice Routes', () => {
     it('should get practice history', async () => {
       // Create a practice session first
       await request(app)
-        .post('/questions')
+        .post('/api/practice/questions')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'behavioral',
@@ -239,7 +272,7 @@ describe('Practice Routes', () => {
         });
 
       const response = await request(app)
-        .get('/history')
+        .get('/api/practice/history')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);

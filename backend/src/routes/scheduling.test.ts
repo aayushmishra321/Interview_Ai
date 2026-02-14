@@ -34,7 +34,7 @@ describe('Scheduling Routes', () => {
       const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       const response = await request(app)
-        .post('/schedule')
+        .post('/api/scheduling/schedule')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'technical',
@@ -56,7 +56,7 @@ describe('Scheduling Routes', () => {
       const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
       const response = await request(app)
-        .post('/schedule')
+        .post('/api/scheduling/schedule')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'technical',
@@ -75,7 +75,7 @@ describe('Scheduling Routes', () => {
       const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       const response = await request(app)
-        .post('/schedule')
+        .post('/api/scheduling/schedule')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'invalid',
@@ -94,7 +94,7 @@ describe('Scheduling Routes', () => {
       const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       const response = await request(app)
-        .post('/schedule')
+        .post('/api/scheduling/schedule')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           type: 'technical',
@@ -121,7 +121,7 @@ describe('Scheduling Routes', () => {
       });
 
       const response = await request(app)
-        .get('/scheduled')
+        .get('/api/scheduling/scheduled')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
@@ -235,7 +235,7 @@ describe('Scheduling Routes', () => {
       });
 
       const response = await request(app)
-        .get('/upcoming')
+        .get('/api/scheduling/upcoming')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);

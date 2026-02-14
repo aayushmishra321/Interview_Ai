@@ -19,9 +19,26 @@ jest.setTimeout(10000);
 jest.mock('../services/gemini', () => ({
   __esModule: true,
   default: {
-    generateInterviewQuestions: jest.fn().mockResolvedValue([
-      { id: 'q1', text: 'Test question 1', type: 'technical', difficulty: 'medium' }
-    ]),
+    generateInterviewQuestions: jest.fn().mockImplementation(() => {
+      return Promise.resolve([
+        { 
+          id: 'q1', 
+          text: 'Test question 1', 
+          type: 'technical', 
+          difficulty: 'medium',
+          expectedDuration: 5,
+          category: 'general'
+        },
+        { 
+          id: 'q2', 
+          text: 'Test question 2', 
+          type: 'technical', 
+          difficulty: 'medium',
+          expectedDuration: 5,
+          category: 'general'
+        }
+      ]);
+    }),
     analyzeResponse: jest.fn().mockResolvedValue({
       score: 85,
       feedback: 'Good answer',

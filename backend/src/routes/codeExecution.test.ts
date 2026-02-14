@@ -24,6 +24,30 @@ describe('Code Execution Routes', () => {
   beforeEach(async () => {
     await cleanupTestData();
     jest.clearAllMocks();
+    
+    // Reconfigure code execution service mock
+    const codeExecutionService = require('../services/codeExecution').default;
+    codeExecutionService.execute.mockResolvedValue({
+      success: true,
+      output: 'Hello, World!',
+      executionTime: 0.05,
+      memory: 1024
+    });
+    codeExecutionService.executeWithTestCases.mockResolvedValue({
+      success: true,
+      testResults: [
+        { input: '2 3', expectedOutput: '5', actualOutput: '5', passed: true },
+        { input: '10 20', expectedOutput: '30', actualOutput: '30', passed: true }
+      ],
+      passedTests: 2,
+      totalTests: 2
+    });
+    codeExecutionService.getSupportedLanguages.mockResolvedValue([
+      { id: 'javascript', name: 'JavaScript', version: '18.0.0' },
+      { id: 'python', name: 'Python', version: '3.10.0' },
+      { id: 'java', name: 'Java', version: '11.0.0' }
+    ]);
+    
     testUser = await createTestUser();
     authToken = getAuthToken(testUser);
     app = createTestApp(codeExecutionRouter, testUser, '/api/code');
@@ -32,7 +56,7 @@ describe('Code Execution Routes', () => {
   describe('POST /api/code/execute', () => {
     it('should execute code', async () => {
       const response = await request(app)
-        .post('/execute')
+        .post('/api/code/execute')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           language: 'javascript',
@@ -47,7 +71,7 @@ describe('Code Execution Routes', () => {
 
     it('should require language and code', async () => {
       const response = await request(app)
-        .post('/execute')
+        .post('/api/code/execute')
         .set('Authorization', `Bearer ${authToken}`)
         .send({});
 
@@ -56,7 +80,7 @@ describe('Code Execution Routes', () => {
 
     it('should handle stdin input', async () => {
       const response = await request(app)
-        .post('/execute')
+        .post('/api/code/execute')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           language: 'python',
@@ -71,7 +95,7 @@ describe('Code Execution Routes', () => {
   describe('POST /api/code/execute-tests', () => {
     it('should execute code with test cases', async () => {
       const response = await request(app)
-        .post('/execute-tests')
+        .post('/api/code/execute-tests')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           language: 'javascript',
@@ -88,7 +112,7 @@ describe('Code Execution Routes', () => {
 
     it('should require test cases array', async () => {
       const response = await request(app)
-        .post('/execute-tests')
+        .post('/api/code/execute-tests')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           language: 'javascript',
@@ -109,6 +133,9 @@ describe('Code Execution Routes', () => {
             id: 'q1',
             text: 'Write a function to add two numbers',
             type: 'coding',
+            difficulty: 'medium',
+            expectedDuration: 5,
+            category: 'algorithms',
             testCases: [
               { input: '2 3', expectedOutput: '5' },
             ],
@@ -167,7 +194,7 @@ describe('Code Execution Routes', () => {
 
   describe('GET /api/code/languages', () => {
     it('should get supported languages without authentication', async () => {
-      const response = await request(app).get('/languages');
+      const response = await request(app).get('/api/code/languages');
 
       expect(response.status).toBe(200);
       expect(response.body.data).toBeInstanceOf(Array);
@@ -177,7 +204,7 @@ describe('Code Execution Routes', () => {
 
   describe('GET /api/code/health', () => {
     it('should check service health without authentication', async () => {
-      const response = await request(app).get('/health');
+      const response = await request(app).get('/api/code/health');
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('status');

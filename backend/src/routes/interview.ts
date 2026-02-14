@@ -779,7 +779,8 @@ router.get('/:id/feedback', asyncHandler(async (req, res) => {
       });
     }
 
-    if (!interview.feedback) {
+    // Check if feedback exists and has content
+    if (!interview.feedback || !interview.feedback.overallRating) {
       return res.status(404).json({
         success: false,
         error: 'Feedback not generated yet',
