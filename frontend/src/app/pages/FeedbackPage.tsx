@@ -17,7 +17,7 @@ const printStyles = `
     
     /* Reset page margins */
     @page {
-      margin: 0.5cm;
+      margin: 0.75cm;
       size: A4 portrait;
     }
     
@@ -31,11 +31,11 @@ const printStyles = `
     /* Make sure cards and sections are visible */
     .print-section {
       page-break-inside: avoid;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       break-inside: avoid;
     }
     
-    /* Ensure charts are visible */
+    /* Ensure charts are visible and properly sized */
     svg {
       max-width: 100% !important;
       height: auto !important;
@@ -44,7 +44,7 @@ const printStyles = `
     /* Better spacing for print */
     .print-container {
       max-width: 100% !important;
-      padding: 10px !important;
+      padding: 0 !important;
       margin: 0 !important;
     }
     
@@ -91,9 +91,9 @@ const printStyles = `
       page-break-after: always;
     }
     
-    /* Reduce excessive spacing */
+    /* Optimize spacing */
     .space-y-8 > * + * {
-      margin-top: 1rem !important;
+      margin-top: 1.5rem !important;
     }
     
     /* Make sure content is not hidden */
@@ -110,6 +110,73 @@ const printStyles = `
     .recharts-wrapper {
       width: 100% !important;
       height: auto !important;
+    }
+    
+    /* Fix grid layouts for print */
+    .grid {
+      display: grid !important;
+    }
+    
+    .lg\\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    
+    .grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    
+    /* Fix flex layouts */
+    .flex {
+      display: flex !important;
+    }
+    
+    /* Ensure proper card padding */
+    .p-6, .p-4 {
+      padding: 1rem !important;
+    }
+    
+    /* Fix text sizes for print */
+    .text-4xl {
+      font-size: 2rem !important;
+      line-height: 1.2 !important;
+    }
+    
+    .text-xl {
+      font-size: 1.25rem !important;
+      line-height: 1.4 !important;
+    }
+    
+    /* Ensure icons are visible */
+    svg.lucide {
+      width: 1.25rem !important;
+      height: 1.25rem !important;
+    }
+    
+    /* Fix circular progress */
+    .relative.inline-block {
+      display: inline-block !important;
+    }
+    
+    /* Ensure proper spacing in lists */
+    ul.space-y-3 > li {
+      margin-top: 0.75rem !important;
+    }
+    
+    /* Fix recommendation cards */
+    .bg-secondary {
+      background-color: #f3f4f6 !important;
+      border: 1px solid #e5e7eb !important;
+    }
+    
+    /* Ensure all content is visible */
+    .overflow-hidden {
+      overflow: visible !important;
+    }
+    
+    /* Fix responsive containers */
+    .container {
+      width: 100% !important;
+      max-width: 100% !important;
     }
   }
 `;
