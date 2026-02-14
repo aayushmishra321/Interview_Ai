@@ -539,6 +539,7 @@ export function FeedbackPage() {
           </Button>
         </div>
       </div>
+    </div>
     </>
   );
 }
