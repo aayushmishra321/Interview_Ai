@@ -7,6 +7,73 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { apiService } from '../services/api';
 import toast from 'react-hot-toast';
 
+// Add print styles
+const printStyles = `
+  @media print {
+    /* Hide navigation and buttons */
+    .no-print {
+      display: none !important;
+    }
+    
+    /* Reset page margins */
+    @page {
+      margin: 1cm;
+      size: A4;
+    }
+    
+    /* Ensure content fits on page */
+    body {
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    
+    /* Make sure cards and sections are visible */
+    .print-section {
+      page-break-inside: avoid;
+      margin-bottom: 20px;
+    }
+    
+    /* Ensure charts are visible */
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+    
+    /* Better spacing for print */
+    .print-container {
+      max-width: 100% !important;
+      padding: 0 !important;
+    }
+    
+    /* Ensure text is readable */
+    * {
+      color: #000 !important;
+      background: #fff !important;
+    }
+    
+    /* Keep gradients and colors for important elements */
+    .gradient-text, .text-primary, [class*="text-"] {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    
+    /* Ensure borders are visible */
+    .border, [class*="border-"] {
+      border-color: #e5e7eb !important;
+    }
+    
+    /* Page breaks */
+    .page-break {
+      page-break-after: always;
+    }
+    
+    /* Hide shadows in print */
+    * {
+      box-shadow: none !important;
+    }
+  }
+`;
+
 export function FeedbackPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -86,26 +153,9 @@ export function FeedbackPage() {
     }
   };
 
-  const handleDownloadPDF = async () => {
-    if (!interviewId) return;
-
-    setDownloading(true);
-    try {
-      const response = await apiService.post(`/api/interview/${interviewId}/report`, {});
-      
-      if (response.success && response.data.reportUrl) {
-        // Open download URL
-        window.open(response.data.reportUrl, '_blank');
-        toast.success('Report downloaded successfully!');
-      } else {
-        throw new Error('Failed to generate report');
-      }
-    } catch (error: any) {
-      console.error('Download PDF error:', error);
-      toast.error('Failed to download report');
-    } finally {
-      setDownloading(false);
-    }
+  const handleDownloadPDF = () => {
+    // Trigger browser's print dialog which allows saving as PDF
+    window.print();
   };
 
   if (loading) {
@@ -197,39 +247,34 @@ export function FeedbackPage() {
   ];
 
   return (
-    <div className="min-h-screen py-20 px-4">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-4xl gradient-text mb-2">Interview Feedback Report</h1>
-            <p className="text-muted-foreground">
-              {interviewData?.type || 'Technical'} Round • {interviewData?.createdAt ? new Date(interviewData.createdAt).toLocaleDateString() : 'Recent'} • Duration: {interviewData?.session?.actualDuration || 45} min
-            </p>
+    <>
+      {/* Inject print styles */}
+      <style>{printStyles}</style>
+      
+      <div className="min-h-screen py-20 px-4 print-container">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 print-section">
+            <div>
+              <h1 className="text-4xl gradient-text mb-2">Interview Feedback Report</h1>
+              <p className="text-muted-foreground">
+                {interviewData?.type || 'Technical'} Round • {interviewData?.createdAt ? new Date(interviewData.createdAt).toLocaleDateString() : 'Recent'} • Duration: {interviewData?.session?.actualDuration || 45} min
+              </p>
+            </div>
+            <div className="flex gap-3 no-print">
+              <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                <Home className="mr-2 w-4 h-4" />
+                Dashboard
+              </Button>
+              <Button variant="gradient" onClick={handleDownloadPDF} className="shadow-lg shadow-primary/50">
+                <Download className="mr-2 w-4 h-4" />
+                Download PDF
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => navigate('/dashboard')}>
-              <Home className="mr-2 w-4 h-4" />
-              Dashboard
-            </Button>
-            <Button variant="gradient" onClick={handleDownloadPDF} disabled={downloading} className="shadow-lg shadow-primary/50">
-              {downloading ? (
-                <>
-                  <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Download className="mr-2 w-4 h-4" />
-                  Download PDF
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
 
         {/* Overall Score */}
-        <Card className="text-center shadow-lg shadow-primary/10">
+        <Card className="text-center shadow-lg shadow-primary/10 print-section">
           <div className="flex flex-col md:flex-row items-center justify-around gap-8">
             <div>
               <h2 className="text-lg text-muted-foreground mb-4">Overall Performance</h2>
@@ -296,7 +341,7 @@ export function FeedbackPage() {
         </Card>
 
         {/* Detailed Scores */}
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-8 print-section">
           <Card>
             <h3 className="text-xl mb-6">Category Scores</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -366,7 +411,7 @@ export function FeedbackPage() {
         </div>
 
         {/* Speech Analysis */}
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-8 print-section">
           <Card>
             <div className="flex items-center gap-2 mb-6">
               <Volume2 className="w-5 h-5 text-primary" />
@@ -426,7 +471,7 @@ export function FeedbackPage() {
         </div>
 
         {/* Strengths & Improvements */}
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-8 print-section">
           <Card>
             <div className="flex items-center gap-2 mb-6">
               <CheckCircle className="w-5 h-5 text-green-400" />
@@ -463,7 +508,7 @@ export function FeedbackPage() {
         </div>
 
         {/* Recommendations */}
-        <Card>
+        <Card className="print-section">
           <h3 className="text-xl mb-6">Personalized Recommendations</h3>
           <div className="grid md:grid-cols-2 gap-4">
             {recommendations.map((rec, index) => (
@@ -485,7 +530,7 @@ export function FeedbackPage() {
         </Card>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center no-print">
           <Button variant="gradient" size="lg" onClick={() => navigate('/interview-setup')} className="shadow-lg shadow-primary/50">
             Start Another Interview
           </Button>
@@ -494,6 +539,6 @@ export function FeedbackPage() {
           </Button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
