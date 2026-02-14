@@ -234,6 +234,141 @@ class EmailService {
     });
   }
 
+  async sendPaymentReceiptEmail(
+    email: string,
+    firstName: string,
+    paymentDetails: {
+      transactionId: string;
+      plan: string;
+      amount: number;
+      currency: string;
+      date: Date;
+      paymentMethod?: string;
+      receiptUrl?: string;
+    }
+  ): Promise<boolean> {
+    const formattedAmount = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: paymentDetails.currency,
+    }).format(paymentDetails.amount / 100);
+
+    const formattedDate = new Intl.DateTimeFormat('en-IN', {
+      dateStyle: 'long',
+      timeStyle: 'short',
+    }).format(paymentDetails.date);
+
+    const planName = paymentDetails.plan.charAt(0).toUpperCase() + paymentDetails.plan.slice(1);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .receipt-box { background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+          .receipt-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
+          .receipt-row:last-child { border-bottom: none; }
+          .receipt-label { color: #6b7280; font-weight: 500; }
+          .receipt-value { color: #111827; font-weight: 600; }
+          .total-row { background: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; }
+          .total-amount { font-size: 24px; color: #10b981; font-weight: bold; }
+          .button { display: inline-block; padding: 12px 30px; background: #10b981; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+          .success-icon { font-size: 48px; margin-bottom: 10px; }
+          .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
+          .info-box { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 5px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="success-icon">✓</div>
+            <h1>Payment Successful!</h1>
+            <p style="margin: 0; opacity: 0.9;">Thank you for your subscription</p>
+          </div>
+          <div class="content">
+            <p>Hi ${firstName},</p>
+            <p>Your payment has been processed successfully. Here are your transaction details:</p>
+            
+            <div class="receipt-box">
+              <h3 style="margin-top: 0; color: #111827;">Payment Receipt</h3>
+              
+              <div class="receipt-row">
+                <span class="receipt-label">Transaction ID</span>
+                <span class="receipt-value">${paymentDetails.transactionId}</span>
+              </div>
+              
+              <div class="receipt-row">
+                <span class="receipt-label">Date & Time</span>
+                <span class="receipt-value">${formattedDate}</span>
+              </div>
+              
+              <div class="receipt-row">
+                <span class="receipt-label">Plan</span>
+                <span class="receipt-value">${planName} Plan</span>
+              </div>
+              
+              ${paymentDetails.paymentMethod ? `
+              <div class="receipt-row">
+                <span class="receipt-label">Payment Method</span>
+                <span class="receipt-value">${paymentDetails.paymentMethod}</span>
+              </div>
+              ` : ''}
+              
+              <div class="total-row">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="receipt-label" style="font-size: 18px;">Total Amount Paid</span>
+                  <span class="total-amount">${formattedAmount}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-box">
+              <strong>📋 What's Next?</strong>
+              <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+                <li>Your ${planName} subscription is now active</li>
+                <li>Access all premium features from your dashboard</li>
+                <li>View your payment history in your profile</li>
+                <li>Download invoice from your account settings</li>
+              </ul>
+            </div>
+
+            <p style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL}/dashboard" class="button">Go to Dashboard</a>
+            </p>
+
+            ${paymentDetails.receiptUrl ? `
+            <p style="text-align: center; margin-top: 20px;">
+              <a href="${paymentDetails.receiptUrl}" style="color: #6366f1; text-decoration: none;">
+                📄 Download Official Receipt from Stripe
+              </a>
+            </p>
+            ` : ''}
+
+            <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px;">
+              <strong>Need help?</strong> Contact our support team at ${process.env.EMAIL_USER || 'support@smartinterviewai.com'}
+            </p>
+          </div>
+          <div class="footer">
+            <p>© 2026 Smart Interview AI. All rights reserved.</p>
+            <p style="margin-top: 10px; font-size: 12px;">
+              This is an automated receipt for your records. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `Payment Receipt - ${planName} Plan - Smart Interview AI`,
+      html,
+    });
+  }
+
   async testConnection(): Promise<boolean> {
     if (!this.isConfigured || !this.transporter) {
       logger.warn('Email service not configured - cannot test connection');

@@ -3,6 +3,8 @@ import { authenticateToken } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import stripeService from '../services/stripe';
 import User from '../models/User';
+import Payment from '../models/Payment';
+import emailService from '../services/email';
 import logger from '../utils/logger';
 
 const router = express.Router();
@@ -382,7 +384,9 @@ router.get('/verify-session/:sessionId', authenticateToken, asyncHandler(async (
       });
     }
 
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['payment_intent', 'line_items'],
+    });
 
     if (session.payment_status === 'paid' && session.customer) {
       // Update user subscription
@@ -394,6 +398,7 @@ router.get('/verify-session/:sessionId', authenticateToken, asyncHandler(async (
         user.subscription.stripeCustomerId = session.customer as string;
         
         // Get subscription ID from session
+        let expiryDate = new Date();
         if (session.subscription) {
           user.subscription.stripeSubscriptionId = session.subscription as string;
           
@@ -401,23 +406,67 @@ router.get('/verify-session/:sessionId', authenticateToken, asyncHandler(async (
             // Get subscription details for expiry date
             const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
             if ((subscription as any).current_period_end) {
-              user.subscription.expiresAt = new Date((subscription as any).current_period_end * 1000);
+              expiryDate = new Date((subscription as any).current_period_end * 1000);
+              user.subscription.expiresAt = expiryDate;
             }
           } catch (subError) {
             logger.warn('Could not retrieve subscription details:', subError);
             // Set default expiry to 1 month from now
-            const oneMonthFromNow = new Date();
-            oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
-            user.subscription.expiresAt = oneMonthFromNow;
+            expiryDate.setMonth(expiryDate.getMonth() + 1);
+            user.subscription.expiresAt = expiryDate;
           }
         } else {
           // No subscription ID (one-time payment), set default expiry to 1 month
-          const oneMonthFromNow = new Date();
-          oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
-          user.subscription.expiresAt = oneMonthFromNow;
+          expiryDate.setMonth(expiryDate.getMonth() + 1);
+          user.subscription.expiresAt = expiryDate;
         }
         
         await user.save();
+
+        // Create payment record
+        const paymentIntent = session.payment_intent as any;
+        const amount = session.amount_total || 0;
+        
+        const payment = await Payment.create({
+          userId: user._id,
+          stripeSessionId: sessionId,
+          stripePaymentIntentId: typeof paymentIntent === 'string' ? paymentIntent : paymentIntent?.id,
+          stripeCustomerId: session.customer as string,
+          stripeSubscriptionId: session.subscription as string || null,
+          amount,
+          currency: session.currency?.toUpperCase() || 'INR',
+          plan,
+          status: 'completed',
+          paymentMethod: paymentIntent?.payment_method_types?.[0] || 'card',
+          receiptUrl: paymentIntent?.charges?.data?.[0]?.receipt_url || null,
+          metadata: {
+            sessionId,
+            customerEmail: session.customer_details?.email,
+          },
+        });
+
+        logger.info(`Payment record created for user: ${user.email}, amount: ${amount}, plan: ${plan}`);
+
+        // Send payment receipt email
+        try {
+          await emailService.sendPaymentReceiptEmail(
+            user.email,
+            user.profile.firstName,
+            {
+              transactionId: payment._id.toString(),
+              plan,
+              amount,
+              currency: payment.currency,
+              date: payment.createdAt,
+              paymentMethod: payment.paymentMethod,
+              receiptUrl: payment.receiptUrl || undefined,
+            }
+          );
+          logger.info(`Payment receipt email sent to: ${user.email}`);
+        } catch (emailError) {
+          logger.error('Failed to send payment receipt email:', emailError);
+          // Don't fail the request if email fails
+        }
 
         logger.info(`Subscription activated for user: ${user.email}, plan: ${plan}`);
       }
@@ -498,6 +547,40 @@ router.get('/plans', asyncHandler(async (req, res) => {
     success: true,
     data: plans,
   });
+}));
+
+/**
+ * Get payment history
+ * GET /api/payment/history
+ */
+router.get('/history', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized',
+    });
+  }
+
+  try {
+    const payments = await Payment.find({ userId })
+      .sort({ createdAt: -1 })
+      .select('-__v')
+      .lean();
+
+    res.json({
+      success: true,
+      data: payments,
+    });
+  } catch (error: any) {
+    logger.error('Get payment history error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get payment history',
+      message: error.message,
+    });
+  }
 }));
 
 /**

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Phone, MapPin, Briefcase, Save, ArrowLeft, Upload } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Briefcase, Save, ArrowLeft, Upload, CreditCard, Download, ExternalLink } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { useAuthStore } from '../stores/authStore';
@@ -12,6 +12,8 @@ export function ProfilePage() {
   const { user, setUser } = useAuthStore();
   
   const [loading, setLoading] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [formData, setFormData] = useState({
     firstName: user?.profile.firstName || '',
     lastName: user?.profile.lastName || '',
@@ -41,6 +43,24 @@ export function ProfilePage() {
     { value: 'coding', label: 'Coding' },
     { value: 'system-design', label: 'System Design' },
   ];
+
+  // Fetch payment history on mount
+  useEffect(() => {
+    const fetchPaymentHistory = async () => {
+      try {
+        const response = await apiService.get('/api/payment/history');
+        if (response.success && response.data) {
+          setPaymentHistory(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch payment history:', error);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+
+    fetchPaymentHistory();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -133,6 +153,30 @@ export function ProfilePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatCurrency = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: currency,
+    }).format(amount / 100);
+  };
+
+  const formatDate = (date: string) => {
+    return new Intl.DateTimeFormat('en-IN', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(date));
+  };
+
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      completed: 'bg-green-100 text-green-800',
+      pending: 'bg-yellow-100 text-yellow-800',
+      failed: 'bg-red-100 text-red-800',
+      refunded: 'bg-gray-100 text-gray-800',
+    };
+    return styles[status as keyof typeof styles] || styles.pending;
   };
 
   return (
@@ -375,6 +419,90 @@ export function ProfilePage() {
                 </div>
               </div>
             </div>
+          </Card>
+
+          {/* Payment History */}
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <CreditCard className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-semibold">Payment History</h2>
+            </div>
+            
+            {loadingHistory ? (
+              <div className="text-center py-8">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className="text-muted-foreground mt-4">Loading payment history...</p>
+              </div>
+            ) : paymentHistory.length === 0 ? (
+              <div className="text-center py-8">
+                <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-muted-foreground">No payment history yet</p>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/subscription')}
+                  className="mt-4"
+                >
+                  View Subscription Plans
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {paymentHistory.map((payment) => (
+                  <div
+                    key={payment._id}
+                    className="border border-border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-lg">
+                            {payment.plan.charAt(0).toUpperCase() + payment.plan.slice(1)} Plan
+                          </h3>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(payment.status)}`}>
+                            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                          <div>
+                            <span className="font-medium">Transaction ID:</span>{' '}
+                            <span className="font-mono text-xs">{payment._id}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium">Date:</span>{' '}
+                            {formatDate(payment.createdAt)}
+                          </div>
+                          {payment.paymentMethod && (
+                            <div>
+                              <span className="font-medium">Payment Method:</span>{' '}
+                              {payment.paymentMethod.charAt(0).toUpperCase() + payment.paymentMethod.slice(1)}
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-medium">Amount:</span>{' '}
+                            <span className="font-semibold text-primary">
+                              {formatCurrency(payment.amount, payment.currency)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {payment.receiptUrl && (
+                        <a
+                          href={payment.receiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-4 p-2 text-primary hover:bg-blue-50 rounded-lg transition-colors"
+                          title="View Receipt"
+                        >
+                          <ExternalLink className="w-5 h-5" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
 
           {/* Action Buttons */}
