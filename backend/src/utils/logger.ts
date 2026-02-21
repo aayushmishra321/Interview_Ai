@@ -30,17 +30,37 @@ const level = () => {
 };
 
 // Define different log formats
-const logFormat = winston.format.combine(
+const consoleFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
   winston.format.colorize({ all: true }),
-  winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`
-  )
+  winston.format.printf((info) => {
+    const { timestamp, level, message, requestId, userId, ...meta } = info;
+    let log = `${timestamp} ${level}: ${message}`;
+    
+    // Add request ID if present
+    if (requestId) {
+      log += ` [RequestID: ${requestId}]`;
+    }
+    
+    // Add user ID if present
+    if (userId) {
+      log += ` [UserID: ${userId}]`;
+    }
+    
+    // Add metadata if present
+    if (Object.keys(meta).length > 0) {
+      log += ` ${JSON.stringify(meta)}`;
+    }
+    
+    return log;
+  })
 );
 
+// Structured JSON format for file logging
 const fileLogFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
   winston.format.errors({ stack: true }),
+  winston.format.metadata({ fillExcept: ['message', 'level', 'timestamp'] }),
   winston.format.json()
 );
 
@@ -49,7 +69,7 @@ const transports = [
   // Console transport
   new winston.transports.Console({
     level: level(),
-    format: logFormat,
+    format: consoleFormat,
   }),
   
   // File transport for errors

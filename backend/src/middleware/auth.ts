@@ -216,7 +216,7 @@ export function requireRole(roles: string | string[]) {
   };
 }
 
-// Admin only middleware
+// Admin only middleware - checks role from JWT token
 export async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   if (!req.user) {
     res.status(401).json({
@@ -226,37 +226,18 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
     return;
   }
 
-  try {
-    // Get user from database to check admin role
-    const user = await User.findById(req.user.userId);
-    
-    if (!user) {
-      res.status(404).json({
-        success: false,
-        error: 'User not found',
-      });
-      return;
-    }
-
-    // Check if user has admin role
-    if (user.auth.role !== 'admin') {
-      res.status(403).json({
-        success: false,
-        error: 'Admin access required',
-        message: 'You do not have permission to access this resource',
-      });
-      return;
-    }
-
-    next();
-  } catch (error: any) {
-    logger.error('Admin authorization error:', error);
-    res.status(500).json({
+  // Check role from JWT token (not database)
+  if (req.user.role !== 'admin') {
+    logger.warn(`Unauthorized admin access attempt by user: ${req.user.userId}, role: ${req.user.role}`);
+    res.status(403).json({
       success: false,
-      error: 'Authorization failed',
-      message: error.message,
+      error: 'Admin access required',
+      message: 'You do not have permission to access this resource',
     });
+    return;
   }
+
+  next();
 }
 
 // Rate limiting by user

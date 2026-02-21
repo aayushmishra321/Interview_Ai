@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { asyncHandler } from '../middleware/errorHandler';
+import { auditLog, getAuditLogs } from '../middleware/auditLogger';
 import User from '../models/User';
 import Interview from '../models/Interview';
 import Resume from '../models/Resume';
@@ -174,7 +175,7 @@ router.get('/users/:id', asyncHandler(async (req: Request, res: Response): Promi
 }));
 
 // Update user
-router.put('/users/:id', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+router.put('/users/:id', auditLog('user.update', 'user'), asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { subscription, auth, profile } = req.body;
   
   const user = await User.findById(req.params.id);
@@ -217,7 +218,7 @@ router.put('/users/:id', asyncHandler(async (req: Request, res: Response): Promi
 }));
 
 // Delete user
-router.delete('/users/:id', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+router.delete('/users/:id', auditLog('user.delete', 'user'), asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const user = await User.findById(req.params.id);
   
   if (!user) {
@@ -533,7 +534,7 @@ router.delete('/interviews/:id', asyncHandler(async (req: Request, res: Response
 // ==================== BULK OPERATIONS ====================
 
 // Bulk delete users
-router.post('/users/bulk-delete', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+router.post('/users/bulk-delete', auditLog('bulk.delete', 'users'), asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { userIds } = req.body;
 
   if (!Array.isArray(userIds) || userIds.length === 0) {
@@ -581,7 +582,7 @@ router.get('/export/users', asyncHandler(async (req: Request, res: Response) => 
 }));
 
 // Export interviews to CSV
-router.get('/export/interviews', asyncHandler(async (req: Request, res: Response) => {
+router.get('/export/interviews', auditLog('admin.export', 'interviews'), asyncHandler(async (req: Request, res: Response) => {
   const interviews = await Interview.find()
     .populate('userId', 'email')
     .lean();
@@ -597,6 +598,27 @@ router.get('/export/interviews', asyncHandler(async (req: Request, res: Response
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename=interviews.csv');
   res.send(csv);
+}));
+
+// Get audit logs
+router.get('/audit-logs', asyncHandler(async (req: Request, res: Response) => {
+  const filters = {
+    userId: req.query.userId as string,
+    action: req.query.action as string,
+    resource: req.query.resource as string,
+    startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
+    endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
+    page: parseInt(req.query.page as string) || 1,
+    limit: parseInt(req.query.limit as string) || 50,
+  };
+
+  const result = await getAuditLogs(filters);
+
+  res.json({
+    success: true,
+    data: result.logs,
+    pagination: result.pagination,
+  });
 }));
 
 export default router;

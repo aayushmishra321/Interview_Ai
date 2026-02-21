@@ -4,6 +4,7 @@ import { Request } from 'express';
 export interface TokenPayload {
   userId: string;
   email?: string;
+  role?: string;
   iat?: number;
   exp?: number;
 }
@@ -13,9 +14,9 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
-// Generate JWT tokens
-export function generateTokens(userId: string): AuthTokens {
-  const payload = { userId };
+// Generate JWT tokens with role
+export function generateTokens(userId: string, role: string = 'user'): AuthTokens {
+  const payload = { userId, role };
   
   const accessToken = jwt.sign(
     payload,

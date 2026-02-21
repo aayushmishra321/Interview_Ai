@@ -6,13 +6,15 @@ import User from '../models/User';
 import Interview from '../models/Interview';
 import { asyncHandler } from '../middleware/errorHandler';
 import cloudinaryService from '../services/cloudinary';
+import redisService from '../services/redis';
+import { cacheUserProfile, invalidateCache } from '../middleware/cacheMiddleware';
 import { profileUpdateValidation, imageFileValidation } from '../utils/validation';
 import logger from '../utils/logger';
 
 const router = express.Router();
 
-// Get current user profile
-router.get('/profile', asyncHandler(async (req, res) => {
+// Get current user profile (with caching)
+router.get('/profile', cacheUserProfile(600), asyncHandler(async (req, res) => {
   console.log('GET /api/user/profile - Request received');
   console.log('User from token:', req.user);
   
@@ -132,6 +134,9 @@ router.put('/profile', profileUpdateValidation(), asyncHandler(async (req, res) 
 
   await user.save();
 
+  // Invalidate profile cache
+  await invalidateCache(`cache:/api/user/profile:${req.user!.userId}`);
+
   logger.info(`User profile updated: ${user.email}`);
 
   res.json({
@@ -220,6 +225,9 @@ router.post('/upload-avatar',
       user.profile.avatar = avatarUrl;
       await user.save();
 
+      // Invalidate profile cache
+      await invalidateCache(`cache:/api/user/profile:${req.user!.userId}`);
+
       logger.info(`Avatar updated for user: ${user.email}`);
 
       res.json({
@@ -238,8 +246,8 @@ router.post('/upload-avatar',
   })
 );
 
-// Get user statistics
-router.get('/stats', asyncHandler(async (req, res) => {
+// Get user statistics (with caching)
+router.get('/stats', cacheUserProfile(300), asyncHandler(async (req, res) => {
   const user = await User.findById(req.user!.userId);
   
   if (!user) {
@@ -359,6 +367,9 @@ router.put('/preferences', [
 
   user.preferences = { ...user.preferences, ...preferences };
   await user.save();
+
+  // Invalidate profile cache
+  await invalidateCache(`cache:/api/user/profile:${req.user!.userId}`);
 
   res.json({
     success: true,

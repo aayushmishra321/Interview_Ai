@@ -1,6 +1,9 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import uvicorn
 import os
 from dotenv import load_dotenv
@@ -27,12 +30,19 @@ from models.analysis_models import (
 # Load environment variables
 load_dotenv()
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Smart Interview AI - ML Server",
     description="AI/ML processing server for Smart Interview AI platform",
     version="1.0.0"
 )
+
+# Add rate limiter to app
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS middleware
 app.add_middleware(
@@ -62,10 +72,30 @@ resume_service = ResumeParserService()
 # Dependency for authentication
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Verify the API token"""
-    expected_token = os.getenv("PYTHON_AI_SERVER_API_KEY")
-    if not expected_token or credentials.credentials != expected_token:
+    expected_token = os.getenv("API_KEY") or os.getenv("PYTHON_AI_SERVER_API_KEY")
+    if not expected_token:
+        logger.error("API_KEY not configured in environment")
+        raise HTTPException(status_code=500, detail="Server configuration error")
+    
+    if credentials.credentials != expected_token:
+        logger.warning(f"Invalid authentication attempt from token: {credentials.credentials[:10]}...")
         raise HTTPException(status_code=401, detail="Invalid authentication token")
+    
     return credentials.credentials
+
+# File size validator
+MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 10485760))  # 10MB default
+
+async def validate_file_size(file: UploadFile):
+    """Validate uploaded file size"""
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size is {MAX_FILE_SIZE / 1024 / 1024}MB"
+        )
+    await file.seek(0)  # Reset file pointer
+    return file
 
 @app.get("/")
 async def root():
@@ -93,16 +123,18 @@ async def health_check():
 
 # Audio Analysis Endpoints
 @app.post("/api/audio/analyze")
+@limiter.limit("30/minute")  # Rate limit: 30 requests per minute
 async def analyze_audio(
-    request: AudioAnalysisRequest,
+    request: Request,
+    audio_request: AudioAnalysisRequest,
     token: str = Depends(verify_token)
 ):
     """Analyze audio for speech patterns, pace, and quality"""
     try:
         result = await audio_service.analyze_audio(
-            audio_data=request.audio_data,
-            sample_rate=request.sample_rate,
-            duration=request.duration
+            audio_data=audio_request.audio_data,
+            sample_rate=audio_request.sample_rate,
+            duration=audio_request.duration
         )
         return {"success": True, "data": result}
     except Exception as e:
@@ -110,15 +142,22 @@ async def analyze_audio(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/audio/speech-to-text")
+@limiter.limit("20/minute")  # Rate limit: 20 requests per minute
 async def speech_to_text(
+    request: Request,
     audio_file: UploadFile = File(...),
     token: str = Depends(verify_token)
 ):
     """Convert speech to text using Whisper"""
     try:
+        # Validate file size
+        await validate_file_size(audio_file)
+        
         audio_data = await audio_file.read()
         result = await speech_service.transcribe_audio(audio_data)
         return {"success": True, "data": result}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Speech-to-text error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -219,18 +258,34 @@ async def batch_analyze_emotions(
 
 # Resume Processing Endpoints
 @app.post("/api/resume/parse")
+@limiter.limit("10/minute")  # Rate limit: 10 requests per minute
 async def parse_resume(
+    request: Request,
     resume_file: UploadFile = File(...),
     token: str = Depends(verify_token)
 ):
     """Parse resume and extract structured information"""
     try:
+        # Validate file size
+        await validate_file_size(resume_file)
+        
+        # Validate file type
+        allowed_types = ['application/pdf', 'application/msword', 
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+        if resume_file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid file type. Only PDF and DOC files are allowed"
+            )
+        
         file_data = await resume_file.read()
         result = await resume_service.parse_resume(
             file_data=file_data,
             filename=resume_file.filename
         )
         return {"success": True, "data": result}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Resume parsing error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -253,39 +308,45 @@ async def analyze_resume(
 
 # AI Question Generation Endpoints
 @app.post("/api/ai/generate-questions")
+@limiter.limit("20/minute")  # Rate limit: 20 requests per minute
 async def generate_questions(
-    request: dict,
+    request: Request,
+    question_request: dict,
     token: str = Depends(verify_token)
 ):
     """Generate interview questions using Gemini AI"""
     try:
-        result = await gemini_service.generate_interview_questions(request)
+        result = await gemini_service.generate_interview_questions(question_request)
         return {"success": True, "data": result}
     except Exception as e:
         logger.error(f"Question generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/ai/analyze-response")
+@limiter.limit("30/minute")  # Rate limit: 30 requests per minute
 async def analyze_response(
-    request: dict,
+    request: Request,
+    response_request: dict,
     token: str = Depends(verify_token)
 ):
     """Analyze interview response using Gemini AI"""
     try:
-        result = await gemini_service.analyze_response(request)
+        result = await gemini_service.analyze_response(response_request)
         return {"success": True, "data": result}
     except Exception as e:
         logger.error(f"Response analysis error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/ai/generate-feedback")
+@limiter.limit("15/minute")  # Rate limit: 15 requests per minute
 async def generate_feedback(
-    request: dict,
+    request: Request,
+    feedback_request: dict,
     token: str = Depends(verify_token)
 ):
     """Generate comprehensive feedback using Gemini AI"""
     try:
-        result = await gemini_service.generate_feedback(request)
+        result = await gemini_service.generate_feedback(feedback_request)
         return {"success": True, "data": result}
     except Exception as e:
         logger.error(f"Feedback generation error: {e}")

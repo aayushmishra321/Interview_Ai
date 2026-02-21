@@ -23,13 +23,28 @@ const upload = multer({
     const allowedTypes = (process.env.SUPPORTED_FILE_TYPES || 'pdf,doc,docx').split(',');
     const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
     
-    if (fileExtension && allowedTypes.includes(fileExtension)) {
-      logger.info(`File type accepted: ${fileExtension}`);
-      cb(null, true);
-    } else {
+    // Validate file extension
+    if (!fileExtension || !allowedTypes.includes(fileExtension)) {
       logger.error(`File type rejected: ${fileExtension}`);
       cb(new Error(`File type not supported. Allowed types: ${allowedTypes.join(', ')}`));
+      return;
     }
+
+    // Validate MIME type
+    const allowedMimeTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      logger.error(`MIME type rejected: ${file.mimetype}`);
+      cb(new Error(`Invalid file type. Expected PDF or Word document.`));
+      return;
+    }
+    
+    logger.info(`File type accepted: ${fileExtension}`);
+    cb(null, true);
   },
 });
 
@@ -101,6 +116,44 @@ router.post('/upload', (req, res, next) => {
         contentType: req.headers['content-type']
       }
     });
+  }
+
+  // Additional file content validation
+  // Check file magic bytes to prevent file type spoofing
+  const fileBuffer = req.file.buffer;
+  const isPDF = fileBuffer[0] === 0x25 && fileBuffer[1] === 0x50 && fileBuffer[2] === 0x44 && fileBuffer[3] === 0x46; // %PDF
+  const isDOC = fileBuffer[0] === 0xD0 && fileBuffer[1] === 0xCF && fileBuffer[2] === 0x11 && fileBuffer[3] === 0xE0; // DOC
+  const isDOCX = fileBuffer[0] === 0x50 && fileBuffer[1] === 0x4B && fileBuffer[2] === 0x03 && fileBuffer[3] === 0x04; // DOCX (ZIP)
+
+  if (!isPDF && !isDOC && !isDOCX) {
+    logger.error('File content validation failed - magic bytes mismatch');
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid file content',
+      message: 'File content does not match expected format. Please upload a valid PDF or Word document.',
+    });
+  }
+
+  // Check for suspicious content patterns (basic malware detection)
+  const fileContent = fileBuffer.toString('utf-8', 0, Math.min(1024, fileBuffer.length));
+  const suspiciousPatterns = [
+    /<script/i,
+    /javascript:/i,
+    /onerror=/i,
+    /onclick=/i,
+    /eval\(/i,
+    /exec\(/i,
+  ];
+
+  for (const pattern of suspiciousPatterns) {
+    if (pattern.test(fileContent)) {
+      logger.error('Suspicious content detected in file');
+      return res.status(400).json({
+        success: false,
+        error: 'Security validation failed',
+        message: 'File contains suspicious content and cannot be processed.',
+      });
+    }
   }
 
   // Check authentication

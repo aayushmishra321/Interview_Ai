@@ -88,5 +88,6 @@ const paymentSchema = new Schema<IPayment>({
 paymentSchema.index({ userId: 1, createdAt: -1 });
 paymentSchema.index({ status: 1 });
 paymentSchema.index({ stripeCustomerId: 1 });
+paymentSchema.index({ createdAt: -1 }); // For payment history and analytics
 
 export default mongoose.model<IPayment>('Payment', paymentSchema);

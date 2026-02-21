@@ -22,6 +22,9 @@ import { notFound } from './middleware/notFound';
 import { authenticateToken, requireAdmin } from './middleware/auth';
 import { apiLimiter, authLimiter, passwordResetLimiter, uploadLimiter } from './middleware/rateLimiter';
 import { sanitizeData, xssProtection, validateInput } from './middleware/sanitizer';
+import { requestIdMiddleware } from './middleware/requestId';
+import { errorSanitizerMiddleware } from './middleware/errorSanitizer';
+import { healthCheckHandler, livenessProbe, readinessProbe } from './middleware/healthCheck';
 import logger from './utils/logger';
 
 /**
@@ -82,6 +85,9 @@ export function createApp(): Application {
 
   app.use(cors(corsOptions));
 
+  // Request ID middleware (must be early in chain)
+  app.use(requestIdMiddleware);
+
   // Body parsing middleware
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -104,23 +110,10 @@ export function createApp(): Application {
   }
 
   // Health check endpoints
-  app.get('/health', (req, res) => {
-    res.status(200).json({
-      status: 'OK',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
-    });
-  });
-
-  app.get('/api/health', (req, res) => {
-    res.status(200).json({
-      status: 'OK',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
-    });
-  });
+  app.get('/health', healthCheckHandler);
+  app.get('/api/health', healthCheckHandler);
+  app.get('/liveness', livenessProbe);
+  app.get('/readiness', readinessProbe);
 
   // API routes - EXACT paths that tests expect
   app.use('/api/auth', authLimiter, authRoutes);
@@ -136,6 +129,7 @@ export function createApp(): Application {
 
   // Error handling middleware (must be last)
   app.use(notFound);
+  app.use(errorSanitizerMiddleware); // Sanitize errors in production
   app.use(errorHandler);
 
   return app;

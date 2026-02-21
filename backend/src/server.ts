@@ -2,6 +2,10 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Validate environment variables before starting server
+import { validateEnvironmentVariables } from './utils/envValidator';
+validateEnvironmentVariables();
+
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';

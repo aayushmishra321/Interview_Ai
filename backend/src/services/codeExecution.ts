@@ -319,8 +319,18 @@ print(solution(${testInput}))`;
 
   /**
    * Execute code (uses configured service)
+   * WARNING: This relies on external service security (Piston/Judge0)
+   * For production, consider implementing local Docker-based sandboxing
    */
   async execute(request: CodeExecutionRequest): Promise<CodeExecutionResult> {
+    // Check if code execution is enabled
+    if (process.env.CODE_EXECUTION_ENABLED === 'false') {
+      return {
+        success: false,
+        error: 'Code execution is currently disabled for security reasons',
+      };
+    }
+
     // Validate language
     if (!this.isLanguageSupported(request.language)) {
       return {
@@ -335,6 +345,30 @@ print(solution(${testInput}))`;
         success: false,
         error: 'Code is too long (max 50KB)',
       };
+    }
+
+    // Basic static analysis - check for dangerous patterns
+    const dangerousPatterns = [
+      /import\s+os/i,
+      /require\s*\(\s*['"]child_process['"]\s*\)/i,
+      /eval\s*\(/i,
+      /exec\s*\(/i,
+      /system\s*\(/i,
+      /__import__/i,
+      /subprocess/i,
+    ];
+
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(request.code)) {
+        logger.warn('Dangerous code pattern detected', {
+          pattern: pattern.toString(),
+          code: request.code.substring(0, 100),
+        });
+        return {
+          success: false,
+          error: 'Code contains potentially dangerous patterns and cannot be executed',
+        };
+      }
     }
 
     try {

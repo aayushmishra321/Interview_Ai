@@ -5,6 +5,7 @@ import { body, validationResult } from 'express-validator';
 import User from '../models/User';
 import { authenticateToken } from '../middleware/auth';
 import { generateTokens } from '../utils/auth';
+import { passwordResetLimiter } from '../middleware/rateLimiter';
 import { 
   registrationValidation, 
   loginValidation, 
@@ -13,6 +14,7 @@ import {
 } from '../utils/validation';
 import logger from '../utils/logger';
 import emailService from '../services/email';
+import redisService from '../services/redis';
 
 const router = express.Router();
 
@@ -64,8 +66,8 @@ router.post('/register', registrationValidation(), async (req, res): Promise<voi
     user.auth.verificationToken = verificationToken;
     await user.save();
 
-    // Generate tokens
-    const tokens = generateTokens(user._id.toString());
+    // Generate tokens with role
+    const tokens = generateTokens(user._id.toString(), user.auth.role || 'user');
 
     // Update last login
     user.auth.lastLogin = new Date();
@@ -152,8 +154,8 @@ router.post('/login', loginValidation(), async (req, res): Promise<void> => {
       });
     }
 
-    // Generate tokens
-    const tokens = generateTokens(user._id.toString());
+    // Generate tokens with role
+    const tokens = generateTokens(user._id.toString(), user.auth.role || 'user');
 
     // Update last login
     user.auth.lastLogin = new Date();
@@ -285,7 +287,7 @@ router.post('/create-profile', async (req: Request, res: Response): Promise<void
   }
 });
 
-// Refresh token
+// Refresh token with rotation and blacklisting
 router.post('/refresh', async (req, res): Promise<void> => {
   try {
     const { refreshToken } = req.body;
@@ -296,6 +298,22 @@ router.post('/refresh', async (req, res): Promise<void> => {
         error: 'Refresh token is required',
       });
       return;
+    }
+
+    // Check if token is blacklisted (revoked)
+    try {
+      const isBlacklisted = await redisService.isInSet('blacklisted_tokens', refreshToken);
+      if (isBlacklisted) {
+        logger.warn('Attempted use of blacklisted refresh token');
+        res.status(401).json({
+          success: false,
+          error: 'Token has been revoked',
+        });
+        return;
+      }
+    } catch (redisError) {
+      // If Redis is not available, continue without blacklist check
+      logger.warn('Redis not available for blacklist check - continuing without check');
     }
 
     // Verify refresh token
@@ -311,8 +329,27 @@ router.post('/refresh', async (req, res): Promise<void> => {
       return;
     }
 
-    // Generate new tokens
-    const tokens = generateTokens(user._id.toString());
+    // Blacklist the old refresh token (token rotation)
+    // Set expiry to match token's remaining lifetime
+    const tokenExp = decoded.exp * 1000; // Convert to milliseconds
+    const now = Date.now();
+    const ttl = Math.max(0, Math.floor((tokenExp - now) / 1000)); // Seconds until expiry
+    
+    if (ttl > 0) {
+      try {
+        await redisService.addToSet('blacklisted_tokens', refreshToken);
+        // Set expiry on the blacklist set to clean up old tokens
+        await redisService.set(`token_blacklist:${refreshToken}`, '1', ttl);
+      } catch (redisError) {
+        // If Redis is not available, log warning but continue
+        logger.warn('Redis not available for token blacklisting - token rotation not enforced');
+      }
+    }
+
+    // Generate new tokens with role (rotation)
+    const tokens = generateTokens(user._id.toString(), user.auth.role || 'user');
+
+    logger.info(`Tokens refreshed and rotated for user: ${user._id}`);
 
     res.json({
       success: true,
@@ -328,11 +365,29 @@ router.post('/refresh', async (req, res): Promise<void> => {
   }
 });
 
-// Logout
+// Logout with token blacklisting
 router.post('/logout', authenticateToken, async (req, res): Promise<void> => {
   try {
-    // In a production app, you might want to blacklist the token
-    // For now, we'll just return success as the client will remove the token
+    const { refreshToken } = req.body;
+    
+    // Blacklist the refresh token if provided
+    if (refreshToken) {
+      try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET!) as any;
+        const tokenExp = decoded.exp * 1000;
+        const now = Date.now();
+        const ttl = Math.max(0, Math.floor((tokenExp - now) / 1000));
+        
+        if (ttl > 0) {
+          await redisService.addToSet('blacklisted_tokens', refreshToken);
+          await redisService.set(`token_blacklist:${refreshToken}`, '1', ttl);
+          logger.info(`Refresh token blacklisted for user: ${req.user?.userId}`);
+        }
+      } catch (tokenError) {
+        // Token might be invalid or expired, continue with logout
+        logger.warn('Failed to blacklist token during logout:', tokenError);
+      }
+    }
     
     logger.info(`User logged out: ${req.user?.userId}`);
 
@@ -351,7 +406,7 @@ router.post('/logout', authenticateToken, async (req, res): Promise<void> => {
 });
 
 // Forgot password
-router.post('/forgot-password', emailValidation(), async (req, res): Promise<void> => {
+router.post('/forgot-password', passwordResetLimiter, emailValidation(), async (req, res): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -409,7 +464,7 @@ router.post('/forgot-password', emailValidation(), async (req, res): Promise<voi
 });
 
 // Reset password
-router.post('/reset-password', [
+router.post('/reset-password', passwordResetLimiter, [
   passwordValidation(),
 ], async (req, res): Promise<void> => {
   try {

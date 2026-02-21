@@ -205,6 +205,8 @@ const userSchema = new Schema<IUser>({
 userSchema.index({ 'preferences.role': 1 });
 userSchema.index({ 'subscription.plan': 1 });
 userSchema.index({ createdAt: -1 });
+userSchema.index({ 'auth.lastLogin': -1 }); // For analytics and user activity tracking
+userSchema.index({ 'subscription.stripeCustomerId': 1 }); // For payment lookups
 
 // Pre-save middleware to hash password
 userSchema.pre('save', async function(next) {

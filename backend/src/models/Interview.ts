@@ -383,6 +383,7 @@ const interviewSchema = new Schema<IInterview>({
 interviewSchema.index({ userId: 1, createdAt: -1 });
 interviewSchema.index({ status: 1 });
 interviewSchema.index({ type: 1 });
+interviewSchema.index({ scheduledTime: 1 }); // For scheduling queries and reminders
 interviewSchema.index({ 'settings.role': 1 });
 interviewSchema.index({ 'analysis.overallScore': -1 });
 

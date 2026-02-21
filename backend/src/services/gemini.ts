@@ -57,7 +57,8 @@ class GeminiService {
         
         // Fallback: Generate default questions
         console.log('Using fallback questions due to parse error...');
-        return this.generateFallbackQuestions(params);
+        const fallback = this.generateFallbackQuestions(params);
+        return fallback || []; // Ensure we never return undefined
       }
       
       // Ensure questions is an array
@@ -66,13 +67,14 @@ class GeminiService {
           questions = questions.questions;
         } else {
           console.error('Questions is not an array:', questions);
-          return this.generateFallbackQuestions(params);
+          const fallback = this.generateFallbackQuestions(params);
+          return fallback || []; // Ensure we never return undefined
         }
       }
       
       logger.info(`Generated ${questions.length} questions for ${params.role} role`);
       console.log(`✅ Successfully generated ${questions.length} questions`);
-      return questions;
+      return questions || []; // Ensure we never return undefined
 
     } catch (error: any) {
       console.error('=== ERROR GENERATING QUESTIONS ===');
@@ -84,7 +86,8 @@ class GeminiService {
       
       // Return fallback questions instead of throwing
       console.log('⚠️ Returning fallback questions due to error...');
-      return this.generateFallbackQuestions(params);
+      const fallback = this.generateFallbackQuestions(params);
+      return fallback || []; // Ensure we never return undefined
     }
   }
 
@@ -643,12 +646,13 @@ class GeminiService {
       } catch (parseError) {
         console.error('JSON parse error in analysis:', parseError);
         // Return fallback analysis
-        return this.generateFallbackAnalysis(params);
+        const fallback = this.generateFallbackAnalysis(params);
+        return fallback || {}; // Ensure we never return undefined
       }
       
       logger.info(`Analyzed response for question: ${params.question.substring(0, 50)}...`);
       console.log('✅ Response analyzed successfully');
-      return analysis;
+      return analysis || {}; // Ensure we never return undefined
 
     } catch (error: any) {
       console.error('=== ERROR ANALYZING RESPONSE ===');
@@ -657,7 +661,8 @@ class GeminiService {
       
       // Return fallback analysis instead of throwing
       console.log('⚠️ Returning fallback analysis...');
-      return this.generateFallbackAnalysis(params);
+      const fallback = this.generateFallbackAnalysis(params);
+      return fallback || {}; // Ensure we never return undefined
     }
   }
 
@@ -733,12 +738,13 @@ class GeminiService {
       } catch (parseError) {
         console.error('JSON parse error in feedback:', parseError);
         // Return fallback feedback
-        return this.generateFallbackFeedback(params);
+        const fallback = this.generateFallbackFeedback(params);
+        return fallback || {}; // Ensure we never return undefined
       }
       
       logger.info(`Generated comprehensive feedback for interview ${params.interviewData.id}`);
       console.log('✅ Feedback generated successfully');
-      return feedback;
+      return feedback || {}; // Ensure we never return undefined
 
     } catch (error: any) {
       console.error('=== ERROR GENERATING FEEDBACK ===');
@@ -747,7 +753,8 @@ class GeminiService {
       
       // Return fallback feedback instead of throwing
       console.log('⚠️ Returning fallback feedback...');
-      return this.generateFallbackFeedback(params);
+      const fallback = this.generateFallbackFeedback(params);
+      return fallback || {}; // Ensure we never return undefined
     }
   }
 
